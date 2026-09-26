@@ -454,6 +454,22 @@ function repairJPEG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array
 
   const hasSOI = workBuffer[0] === 0xff && workBuffer[1] === 0xd8;
 
+  // Check if the JPEG is already structurally sound (SOI + APP0/APP1 present)
+  // If so, skip destructive byte-level repairs that would corrupt a valid Huffman stream.
+  // Visual-layer corruption (glitch blocks, scan lines) is handled by canvas inpainting.
+  const hasValidApp = hasSOI && workBuffer.length > 4 &&
+    workBuffer[2] === 0xff && (workBuffer[3] === 0xe0 || workBuffer[3] === 0xe1);
+
+  if (hasValidApp) {
+    logs.push({
+      id: safeRandomUUID(),
+      timestamp: new Date().toLocaleTimeString(),
+      type: 'info',
+      message: 'JPEG Structure Validated: SOI + APP marker intact. Skipping byte-level scan-data manipulation — visual repair via canvas inpainting.',
+    });
+    return { buffer: workBuffer, fixes };
+  }
+
   if (!hasSOI) {
     // Search for any JPEG marker in the first 8KB
     let markerIdx = -1;
@@ -824,33 +840,49 @@ export async function restoreCanvasPixels(imageBlob: Blob): Promise<{ restoredBl
 
       // === Pass 1: Alpha Channel Healing ===
       for (let i = 3; i < data.length; i += 4) {
-        if (data[i] < 10) {
-          data[i] = 255;
-        }
+        if (data[i] < 10) data[i] = 255;
       }
 
-      // === Pass 2: Detect and inpaint corrupted rectangular regions ===
-      // Find regions where pixels are all black (common corruption pattern)
+      // === Pass 2: Detect corrupted pixels ===
+      // Detects:
+      //   a) Pure black pixels (zeroed/null corruption)
+      //   b) Highly saturated glitch pixels — the vivid multicolored noise blocks
+      //      produced by AI-generated or real JPEG corruption
       const isCorrupted = new Uint8Array(width * height);
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
           const idx = (y * width + x) * 4;
           const r = data[idx], g = data[idx + 1], b = data[idx + 2];
-          // Mark as corrupted if pixel is pure black or has very low values
-          // in an area where neighbors are not black
+
+          // Pure black / null block
           if (r === 0 && g === 0 && b === 0) {
+            isCorrupted[y * width + x] = 1;
+            continue;
+          }
+
+          // Highly saturated noise pixel: at least one channel maxed AND
+          // large inter-channel spread — characteristic of glitch block pixels
+          const maxC = Math.max(r, g, b);
+          const minC = Math.min(r, g, b);
+          const spread = maxC - minC;
+          if (maxC >= 240 && spread >= 160) {
             isCorrupted[y * width + x] = 1;
           }
         }
       }
 
-      // Inpaint corrupted pixels using average of non-corrupted neighbors
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          if (isCorrupted[y * width + x]) {
+      // === Pass 3: Multi-pass inpainting — large radius for block corruption ===
+      // Run multiple passes so interior pixels of big corrupt regions get filled
+      // by their progressively-restored neighbours.
+      for (let pass = 0; pass < 4; pass++) {
+        const snapshot = new Uint8ClampedArray(data);
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            if (!isCorrupted[y * width + x]) continue;
+
             const idx = (y * width + x) * 4;
             let sumR = 0, sumG = 0, sumB = 0, count = 0;
-            const radius = 3;
+            const radius = 6; // Large radius to reach clean pixels across big blocks
 
             for (let dy = -radius; dy <= radius; dy++) {
               for (let dx = -radius; dx <= radius; dx++) {
@@ -858,9 +890,9 @@ export async function restoreCanvasPixels(imageBlob: Blob): Promise<{ restoredBl
                 if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
                   if (!isCorrupted[ny * width + nx]) {
                     const nIdx = (ny * width + nx) * 4;
-                    sumR += data[nIdx];
-                    sumG += data[nIdx + 1];
-                    sumB += data[nIdx + 2];
+                    sumR += snapshot[nIdx];
+                    sumG += snapshot[nIdx + 1];
+                    sumB += snapshot[nIdx + 2];
                     count++;
                   }
                 }
@@ -868,30 +900,28 @@ export async function restoreCanvasPixels(imageBlob: Blob): Promise<{ restoredBl
             }
 
             if (count > 0) {
-              data[idx] = Math.round(sumR / count);
+              data[idx]     = Math.round(sumR / count);
               data[idx + 1] = Math.round(sumG / count);
               data[idx + 2] = Math.round(sumB / count);
+              // Mark as no longer corrupted so next pass can use it as a source
+              isCorrupted[y * width + x] = 0;
             }
           }
         }
       }
 
-      // === Pass 3: Median filter for salt-and-pepper noise ===
+      // === Pass 4: Median filter — remove residual single-pixel noise spikes ===
       const tempData = new Uint8ClampedArray(data);
       for (let y = 1; y < height - 1; y++) {
         for (let x = 1; x < width - 1; x++) {
           const idx = (y * width + x) * 4;
           const r = data[idx], g = data[idx + 1], b = data[idx + 2];
-
-          // Check if this pixel is a noise spike (extreme outlier)
-          const isSpike = (r === 0 && g === 0 && b === 0) ||
-                          (r === 255 && g === 255 && b === 255) ||
-                          (r === 255 && g === 0 && b === 0) ||
-                          (r === 0 && g === 255 && b === 0) ||
-                          (r === 0 && g === 0 && b === 255);
+          const maxC = Math.max(r, g, b);
+          const minC = Math.min(r, g, b);
+          // Spike: any pixel that is still extremely saturated / noisy after inpainting
+          const isSpike = (maxC >= 240 && maxC - minC >= 160);
 
           if (isSpike) {
-            // Collect 3x3 neighborhood values
             const rValues: number[] = [], gValues: number[] = [], bValues: number[] = [];
             for (let dy = -1; dy <= 1; dy++) {
               for (let dx = -1; dx <= 1; dx++) {
@@ -902,31 +932,30 @@ export async function restoreCanvasPixels(imageBlob: Blob): Promise<{ restoredBl
                 bValues.push(data[nIdx + 2]);
               }
             }
-
-            // Use median
             rValues.sort((a, b) => a - b);
             gValues.sort((a, b) => a - b);
             bValues.sort((a, b) => a - b);
             const mid = Math.floor(rValues.length / 2);
-            tempData[idx] = rValues[mid];
+            tempData[idx]     = rValues[mid];
             tempData[idx + 1] = gValues[mid];
             tempData[idx + 2] = bValues[mid];
           }
         }
       }
-
-      // Copy filtered data back
-      for (let i = 0; i < data.length; i++) {
-        data[i] = tempData[i];
-      }
+      for (let i = 0; i < data.length; i++) data[i] = tempData[i];
 
       ctx.putImageData(imgData, 0, 0);
+
+      // Always export as JPEG for JPEG inputs (not PNG) to avoid MIME mismatch
+      const outputMime = (imageBlob.type === 'image/jpeg' || imageBlob.type === 'image/jpg')
+        ? 'image/jpeg'
+        : (imageBlob.type || 'image/png');
 
       canvas.toBlob(async (resBlob) => {
         const finalBlob = resBlob || imageBlob;
         const buf = await finalBlob.arrayBuffer();
         resolve({ restoredBlob: finalBlob, restoredBuffer: buf });
-      }, imageBlob.type || 'image/png');
+      }, outputMime, 0.92);
     };
 
     img.onerror = () => {
