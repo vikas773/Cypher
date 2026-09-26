@@ -1,5 +1,6 @@
 import type { RepairLog, SignatureDefinition } from '../../types/fileTypes';
 import { findByteSequence } from './magicBytes';
+import { safeRandomUUID } from '../uuid';
 
 export interface AudioRepairResult {
   reconstructedBytes: Uint8Array;
@@ -75,7 +76,7 @@ function repairWAV(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
       workBuffer = newBuf;
       fixes++;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: `WAV RIFF Header Restored: Found WAVE chunk at offset ${waveIdx}, reconstructed RIFF container header.`,
@@ -96,7 +97,7 @@ function repairWAV(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
       workBuffer = newBuf;
       fixes++;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: `WAV Header Synthesized: Created ${wavHeader.length}-byte PCM header (${analysis.sampleRate}Hz, ${analysis.channels}ch, ${analysis.bitsPerSample}-bit) based on data analysis.`,
@@ -115,7 +116,7 @@ function repairWAV(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
       dv.setUint32(4, correctSize, true);
       fixes++;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: `WAV RIFF Size Corrected: Updated from ${storedSize} to ${correctSize} bytes.`,
@@ -132,7 +133,7 @@ function repairWAV(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
         dv.setUint32(dataIdx + 4, pcmLen, true);
         fixes++;
         logs.push({
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           timestamp: new Date().toLocaleTimeString(),
           type: 'repair',
           message: `WAV Data Chunk Recalibrated: Corrected PCM data length from ${storedDataLen} to ${pcmLen} bytes.`,
@@ -150,7 +151,7 @@ function repairWAV(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
         dv.setUint16(fmtIdx + 8, 1, true); // Set to PCM
         fixes++;
         logs.push({
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           timestamp: new Date().toLocaleTimeString(),
           type: 'repair',
           message: `WAV Format Tag Corrected: Invalid audio format ${audioFormat}, reset to PCM (1).`,
@@ -163,7 +164,7 @@ function repairWAV(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
         dv.setUint16(fmtIdx + 10, 2, true); // Default stereo
         fixes++;
         logs.push({
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           timestamp: new Date().toLocaleTimeString(),
           type: 'repair',
           message: `WAV Channel Count Corrected: Invalid channel count ${channels}, reset to stereo (2).`,
@@ -176,7 +177,7 @@ function repairWAV(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
         dv.setUint32(fmtIdx + 12, 44100, true);
         fixes++;
         logs.push({
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           timestamp: new Date().toLocaleTimeString(),
           type: 'repair',
           message: `WAV Sample Rate Corrected: Invalid rate ${sampleRate}Hz, reset to 44100Hz.`,
@@ -215,7 +216,7 @@ function repairWAV(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
       if (clicksFixed > 0) {
         fixes++;
         logs.push({
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           timestamp: new Date().toLocaleTimeString(),
           type: 'repair',
           message: `WAV Audio Signal Repair: Removed ${clicksFixed} click/pop artifacts via sample interpolation.`,
@@ -267,7 +268,7 @@ function repairMP3(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
       workBuffer = workBuffer.subarray(syncIdx);
       fixes++;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: `MP3 Bitstream Resynchronized: Found frame sync at offset ${syncIdx}, stripped ${syncIdx} bytes of pre-audio corruption.`,
@@ -282,7 +283,7 @@ function repairMP3(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
       workBuffer = newBuf;
       fixes++;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: 'MP3 ID3v2 Container Injected: No frame sync detected. Added metadata header for player compatibility.',
@@ -325,7 +326,7 @@ function repairMP3(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
 
   if (corruptedFrames > 0 && validFrames > 0) {
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'info',
       message: `MP3 Frame Analysis: ${validFrames} valid frames, ${corruptedFrames} corrupted/non-frame bytes detected.`,

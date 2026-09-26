@@ -1,6 +1,7 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import type { RepairLog, SignatureDefinition } from '../../types/fileTypes';
 import { findByteSequence } from './magicBytes';
+import { safeRandomUUID } from '../uuid';
 
 export interface PdfRepairResult {
   reconstructedBytes: Uint8Array;
@@ -39,7 +40,7 @@ export async function repairPdf(
     workBuffer = newBuf;
     fixesCount++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'PDF Header Restored: Injected missing "%PDF-1.7" standard binary header signature.',
@@ -49,7 +50,7 @@ export async function repairPdf(
     workBuffer = workBuffer.subarray(pdfIdx);
     fixesCount++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `PDF Offset Realignment: Removed ${pdfIdx} bytes of prefix noise prior to %PDF header.`,
@@ -69,7 +70,7 @@ export async function repairPdf(
     workBuffer = newBuf;
     fixesCount++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'PDF %%EOF Marker Reconstructed: Appended missing End-Of-File trailer block.',
@@ -88,7 +89,7 @@ export async function repairPdf(
 
     if (pageCount > 0) {
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'success',
         message: `PDF Internal Structure Repaired: Successfully parsed and re-indexed ${pageCount} page(s), rebuilt cross-reference table and serialized valid object tree.`,
@@ -108,7 +109,7 @@ export async function repairPdf(
     }
   } catch {
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'warning',
       message: 'PDF Structure Parser: Standard parsing failed. Engaging deep content extraction and reconstruction pipeline.',
@@ -189,7 +190,7 @@ export async function repairPdf(
 
         fixesCount += 3;
         logs.push({
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           timestamp: new Date().toLocaleTimeString(),
           type: 'repair',
           message: `PDF Content Recovery: Extracted ${allLines.length} lines of text content from corrupted stream objects and rebuilt into ${newPdf.getPageCount()} page(s).`,
@@ -232,7 +233,7 @@ export async function repairPdf(
       confidenceScore = extractedContent.length > 100 ? 85 : 70;
 
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'success',
         message: `PDF Document Rebuilt: Created valid ${newPdf.getPageCount()}-page PDF with recovered content, metadata, and reconstruction report.`,
@@ -240,7 +241,7 @@ export async function repairPdf(
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'warning',
         message: `PDF Rebuild Notice: ${msg}. Applying raw binary container restoration.`,
@@ -257,7 +258,7 @@ export async function repairPdf(
     fixesCount += 2;
     confidenceScore = 60;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'PDF Container Synthesized: Heavy structural damage detected. Created valid PDF shell with recovery metadata.',

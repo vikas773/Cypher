@@ -1,4 +1,5 @@
 import type { RepairLog } from '../../types/fileTypes';
+import { safeRandomUUID } from '../uuid';
 
 export interface DeepByteRepairResult {
   reconstructedBytes: Uint8Array;
@@ -32,7 +33,7 @@ export function deepByteRepair(buffer: Uint8Array): DeepByteRepairResult {
     workBuffer = workBuffer.subarray(leadingZeros);
     fixesCount++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `Deep Byte Healer Phase 1: Stripped ${leadingZeros} leading null-padded corruption bytes and realigned data stream.`,
@@ -95,7 +96,7 @@ export function deepByteRepair(buffer: Uint8Array): DeepByteRepairResult {
   if (nullBurstsHealed > 0) {
     fixesCount += nullBurstsHealed;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `Deep Byte Healer Phase 2: Interpolated ${nullBurstsHealed} null-burst corruption region(s) using contextual byte analysis.`,
@@ -142,7 +143,7 @@ export function deepByteRepair(buffer: Uint8Array): DeepByteRepairResult {
   if (spikesFixed > 0) {
     fixesCount += Math.ceil(spikesFixed / 10); // Count as grouped fixes
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `Deep Byte Healer Phase 3: Corrected ${spikesFixed} statistical byte anomalies (bit-flip noise spikes) via neighbor interpolation.`,
@@ -176,7 +177,7 @@ export function deepByteRepair(buffer: Uint8Array): DeepByteRepairResult {
   if (garbagePatternsFixed > 0) {
     fixesCount += garbagePatternsFixed;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `Deep Byte Healer Phase 4: Neutralized ${garbagePatternsFixed} injected garbage pattern block(s) (0xFF runs).`,
@@ -198,7 +199,7 @@ export function deepByteRepair(buffer: Uint8Array): DeepByteRepairResult {
     workBuffer = mutableBuffer.subarray(0, mutableBuffer.length - trailingGarbage);
     fixesCount++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `Deep Byte Healer Phase 5: Trimmed ${trailingGarbage} bytes of trailing corruption padding.`,
@@ -209,7 +210,7 @@ export function deepByteRepair(buffer: Uint8Array): DeepByteRepairResult {
 
   if (fixesCount === 0) {
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'info',
       message: 'Deep Byte Healer: No recoverable corruption patterns detected at binary level.',

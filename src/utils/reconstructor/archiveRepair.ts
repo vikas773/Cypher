@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import type { RepairLog, SignatureDefinition } from '../../types/fileTypes';
 import { findByteSequence } from './magicBytes';
+import { safeRandomUUID } from '../uuid';
 
 export interface ArchiveRepairResult {
   reconstructedBytes: Uint8Array;
@@ -48,7 +49,7 @@ export async function repairArchive(
       workBuffer = newBuf;
       fixesCount++;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: 'ZIP Local File Header Injected: Found central directory but missing local file header. Restored PK\\x03\\x04 signature.',
@@ -57,7 +58,7 @@ export async function repairArchive(
     } else {
       // No ZIP structure at all - try wrapping as a single-file ZIP
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'warning',
         message: 'No ZIP structure detected in file. Attempting to wrap raw data as ZIP container.',
@@ -70,14 +71,14 @@ export async function repairArchive(
         workBuffer = new Uint8Array(zipBytes);
         fixesCount += 2;
         logs.push({
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           timestamp: new Date().toLocaleTimeString(),
           type: 'repair',
           message: 'ZIP Container Created: Wrapped unrecognized data into valid ZIP archive as recovered_data.bin.',
         });
       } catch {
         logs.push({
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           timestamp: new Date().toLocaleTimeString(),
           type: 'error',
           message: 'ZIP Container Creation Failed: Unable to wrap data into ZIP format.',
@@ -88,7 +89,7 @@ export async function repairArchive(
     workBuffer = workBuffer.subarray(pkIdx);
     fixesCount++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `ZIP Offset Realignment: Removed ${pkIdx} corrupted preamble bytes before PK signature.`,
@@ -103,7 +104,7 @@ export async function repairArchive(
 
     if (fileEntries.length > 0) {
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'success',
         message: `ZIP Directory Structure Parsed: Found ${fileEntries.length} archive entries. Rebuilding clean container.`,
@@ -148,7 +149,7 @@ export async function repairArchive(
       confidenceScore = failedFiles === 0 ? 95 : Math.max(65, 95 - failedFiles * 10);
 
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'success',
         message: `ZIP Reconstruction Complete: ${recoveredFiles} file(s) recovered${failedFiles > 0 ? `, ${failedFiles} unrecoverable` : ''}. Archive re-serialized with DEFLATE compression.`,
@@ -164,7 +165,7 @@ export async function repairArchive(
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'warning',
       message: `ZIP Standard Parser Failed: ${errorMessage}. Engaging deep recovery mode.`,
@@ -224,7 +225,7 @@ export async function repairArchive(
       confidenceScore = Math.min(85, 60 + entriesFound * 5);
 
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: `ZIP Deep Recovery: Salvaged ${entriesFound} file entries by parsing individual PK local file headers. Reconstructed valid ZIP container.`,
@@ -248,7 +249,7 @@ export async function repairArchive(
       confidenceScore = 55;
 
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: 'ZIP Fallback Container: Created valid ZIP with preserved raw data and recovery report.',
@@ -257,7 +258,7 @@ export async function repairArchive(
   } catch {
     // Final fallback
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'error',
       message: 'ZIP Recovery Engine: Deep recovery exhausted all strategies.',

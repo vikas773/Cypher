@@ -7,6 +7,7 @@ import { repairArchive } from './archiveRepair';
 import { repairAudio } from './audioRepair';
 import { deepByteRepair } from './deepByteRepair';
 import { assembleFragments, isFragmentBuffer } from './assembler';
+import { safeRandomUUID } from '../uuid';
 
 /**
  * Master Reconstruction Orchestrator
@@ -47,7 +48,7 @@ export async function reconstructCorruptedFile(
 
   if (hasFragmentHeaders) {
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'info',
       message: `Binary Fragment Signature Recognized (b"FRG\\x00"): Analyzing ${uint8Arrays.length} fragment block(s)...`,
@@ -60,7 +61,7 @@ export async function reconstructCorruptedFile(
       assembledMeta = { fileIdHex: assembleResult.fileIdHex, totalChunks: assembleResult.totalChunks };
 
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: `Stitching Engine Complete: Successfully assembled ${assembleResult.totalChunks} .bin fragment(s) [File ID: 0x${assembleResult.fileIdHex}] into ${inputBytes.length.toLocaleString()} bytes unified stream.`,
@@ -68,7 +69,7 @@ export async function reconstructCorruptedFile(
       fileName = `stitched_${fileName.replace(/\.(bin|frg\d*)$/i, '')}`;
     } catch (err: any) {
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'error',
         message: `Fragment Assembly Error: ${err.message}. Falling back to raw stream processing.`,
@@ -80,7 +81,7 @@ export async function reconstructCorruptedFile(
   }
 
   logs.push({
-    id: crypto.randomUUID(),
+    id: safeRandomUUID(),
     timestamp: new Date().toLocaleTimeString(),
     type: 'info',
     message: `Initiating Cypher Deep Signal Analysis on "${fileName}" (${inputBytes.length.toLocaleString()} bytes)...`,
@@ -99,14 +100,14 @@ export async function reconstructCorruptedFile(
       headerHex: [],
     };
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'warning',
       message: 'Magic Header Missing or Obfuscated: Routing to Deep Heuristic Byte Repair Engine.',
     });
   } else {
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'info',
       message: `Signature Match Identified: [${detectedSig.name}] (MIME: ${detectedSig.mime}).`,
@@ -130,7 +131,7 @@ export async function reconstructCorruptedFile(
   let confidenceScore = 80;
 
   logs.push({
-    id: crypto.randomUUID(),
+    id: safeRandomUUID(),
     timestamp: new Date().toLocaleTimeString(),
     type: 'info',
     message: `Engaging ${getCategoryEngineName(category)} reconstruction engine...`,
@@ -177,7 +178,7 @@ export async function reconstructCorruptedFile(
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'error',
       message: `Reconstruction engine error: ${msg}. Falling back to deep byte repair.`,
@@ -195,14 +196,14 @@ export async function reconstructCorruptedFile(
   const bytesChanged = countChangedBytes(inputBytes, repairedBytes);
   if (bytesChanged === 0 && fixesCount === 0) {
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'info',
       message: 'File structure appears intact. No corruption patterns detected requiring repair.',
     });
   } else if (bytesChanged > 0) {
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `Binary Diff: ${bytesChanged.toLocaleString()} byte(s) modified/added during reconstruction (${((bytesChanged / Math.max(1, repairedBytes.length)) * 100).toFixed(1)}% of output).`,
@@ -223,7 +224,7 @@ export async function reconstructCorruptedFile(
       reconstructedBlob = restoredBlob;
       repairedBuffer = restoredBuffer;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: 'Canvas Spatial Restoration Complete: Applied median filtering, region inpainting, and alpha channel healing.',
@@ -231,7 +232,7 @@ export async function reconstructCorruptedFile(
       fixesCount++;
     } catch {
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'info',
         message: 'Canvas post-processing skipped (image format may not support browser rendering).',
@@ -289,7 +290,7 @@ export async function reconstructCorruptedFile(
 
   // Final summary log
   logs.push({
-    id: crypto.randomUUID(),
+    id: safeRandomUUID(),
     timestamp: new Date().toLocaleTimeString(),
     type: 'success',
     message: `Forensic Reconstruction Complete: Priority ${investigationPriority} | Integrity: ${integrityScore}% | SHA-256: ${sha256Hash.substring(0, 16)}...`,

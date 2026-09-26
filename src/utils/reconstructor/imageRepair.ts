@@ -1,5 +1,6 @@
 import type { RepairLog, SignatureDefinition } from '../../types/fileTypes';
 import { findByteSequence } from './magicBytes';
+import { safeRandomUUID } from '../uuid';
 
 export interface ImageRepairResult {
   reconstructedBytes: Uint8Array;
@@ -249,7 +250,7 @@ function repairPNG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
       if (headerFixed) {
         fixes++;
         logs.push({
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           timestamp: new Date().toLocaleTimeString(),
           type: 'repair',
           message: 'PNG Magic Signature & IHDR Chunk Length Restored: Reconstructed 8-byte PNG header and 13-byte IHDR chunk descriptor.',
@@ -266,7 +267,7 @@ function repairPNG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
       workBuffer = newBuf;
       fixes += 2;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: 'PNG Header Synthesized: Created valid PNG magic signature and aligned IHDR structure.',
@@ -290,7 +291,7 @@ function repairPNG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
       workBuffer = recoveryPng as any;
       fixes += 3;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: `PNG Full Structural Rebuild: IHDR missing. Reconstructed valid PNG container (${estPixels}x${estPixels}) wrapping salvaged pixel data from IDAT stream.`,
@@ -303,7 +304,7 @@ function repairPNG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
       workBuffer = recoveryPng as any;
       fixes += 4;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: `PNG Container Synthesized: No valid PNG structure found. Created ${dim}x${dim} recovery image from raw byte data with complete PNG header/IHDR/IDAT/IEND structure.`,
@@ -326,7 +327,7 @@ function repairPNG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
       workBuffer[crcOffset + 3] = calcIhdrCrc & 0xff;
       fixes++;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: 'PNG IHDR Checksum Repaired: Recalculated valid CRC32 checksum for IHDR chunk.',
@@ -349,7 +350,7 @@ function repairPNG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
         if (chunkLen < 0 || chunkLen > workBuffer.length || offset + 12 + chunkLen > workBuffer.length) {
           // Invalid chunk length - truncate here and add IEND
           logs.push({
-            id: crypto.randomUUID(),
+            id: safeRandomUUID(),
             timestamp: new Date().toLocaleTimeString(),
             type: 'repair',
             message: `PNG Chunk Stream Truncation Recovery: Invalid chunk at offset ${offset} (claimed ${chunkLen} bytes). Salvaged all valid chunks before corruption point.`,
@@ -387,7 +388,7 @@ function repairPNG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
       if (repairedCrcs > 0) {
         fixes += repairedCrcs;
         logs.push({
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           timestamp: new Date().toLocaleTimeString(),
           type: 'repair',
           message: `PNG Data Integrity Fix: Recalculated CRC32 checksums for ${repairedCrcs} corrupted chunks [${[...new Set(corruptedChunks)].join(', ')}].`,
@@ -410,7 +411,7 @@ function repairPNG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
     workBuffer = newBuf;
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'PNG IEND Footer Appended: Fixed missing end-of-file trailer chunk.',
@@ -435,7 +436,7 @@ function repairPNG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
         workBuffer = recPng as any;
         fixes += 2;
         logs.push({
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           timestamp: new Date().toLocaleTimeString(),
           type: 'repair',
           message: `PNG IDAT Data Reconstruction: Missing image data stream. Rebuilt valid ${w}x${h} IDAT payload from original byte patterns.`,
@@ -485,7 +486,7 @@ function repairJPEG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array
       workBuffer = newBuf;
       fixes++;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: `JPEG SOI Header Restored: Found valid marker at offset ${markerIdx}, injected SOI (0xFFD8) and stripped ${markerIdx} corrupted preamble bytes.`,
@@ -499,7 +500,7 @@ function repairJPEG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array
       workBuffer = newBuf;
       fixes++;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: 'JPEG Header Synthesized: Restored complete JFIF APP0 header with 0xFFD8 SOI marker.',
@@ -549,7 +550,7 @@ function repairJPEG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array
   if (markerFixes > 0) {
     fixes += markerFixes;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `JPEG Marker Segment Repair: Fixed ${markerFixes} corrupted segment length field(s) across JPEG stream.`,
@@ -590,7 +591,7 @@ function repairJPEG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array
       if (nullRuns > 0) {
         fixes += nullRuns;
         logs.push({
-          id: crypto.randomUUID(),
+          id: safeRandomUUID(),
           timestamp: new Date().toLocaleTimeString(),
           type: 'repair',
           message: `JPEG Scan Data Recovery: Interpolated ${nullRuns} corrupted null-block region(s) within entropy-coded image data stream.`,
@@ -612,7 +613,7 @@ function repairJPEG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array
           workBuffer = workBuffer.subarray(0, i + 1);
           fixes++;
           logs.push({
-            id: crypto.randomUUID(),
+            id: safeRandomUUID(),
             timestamp: new Date().toLocaleTimeString(),
             type: 'repair',
             message: 'JPEG Trailing Garbage Removed: Trimmed post-EOI corruption bytes.',
@@ -630,7 +631,7 @@ function repairJPEG(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array
       workBuffer = newBuf;
       fixes++;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: 'JPEG EOI Marker Appended: Added missing 0xFFD9 End-of-Image footer marker.',
@@ -652,7 +653,7 @@ function repairBMP(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
     workBuffer[1] = 0x4d;
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'BMP Signature Restored: Rebuilt damaged "BM" file header.',
@@ -668,7 +669,7 @@ function repairBMP(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
       dv.setUint32(2, workBuffer.length, true);
       fixes++;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: `BMP File Size Field Corrected: Updated from ${storedSize} to ${workBuffer.length} bytes.`,
@@ -685,7 +686,7 @@ function repairBMP(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
       dv.setUint32(14, 40, true); // Default to BITMAPINFOHEADER
       fixes++;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: `BMP DIB Header Size Corrected: Invalid header size ${dibSize}, reset to standard BITMAPINFOHEADER (40 bytes).`,
@@ -712,7 +713,7 @@ function repairGIF(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
   if (headerChanged) {
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'GIF89a Magic Header Restored.',
@@ -728,7 +729,7 @@ function repairGIF(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array;
     workBuffer = newBuf;
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'GIF Trailer Appended: Added missing 0x3B end-of-file marker.',
@@ -763,7 +764,7 @@ function repairWebP(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array
     if (markerFixed) {
       fixes++;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: 'WebP RIFF/WEBP Container Header Restored.',
@@ -778,7 +779,7 @@ function repairWebP(buffer: Uint8Array, logs: RepairLog[]): { buffer: Uint8Array
       dv.setUint32(4, fileSize, true);
       fixes++;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: `WebP RIFF Size Field Corrected: Updated container size to ${fileSize} bytes.`,

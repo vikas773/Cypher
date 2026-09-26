@@ -1,4 +1,5 @@
 import type { RepairLog, SignatureDefinition } from '../../types/fileTypes';
+import { safeRandomUUID } from '../uuid';
 
 export interface DocumentRepairResult {
   reconstructedBytes: Uint8Array;
@@ -37,7 +38,7 @@ export function repairDocument(
     const strippedCount = originalLen - text.length;
     fixesCount++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `Null Byte Cleansing: Purged ${strippedCount} corrupted binary null bytes (0x00) from text stream.`,
@@ -49,7 +50,7 @@ export function repairDocument(
     text = text.substring(1);
     fixesCount++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'BOM Marker Stripped: Removed Unicode Byte Order Mark from text stream.',
@@ -63,7 +64,7 @@ export function repairDocument(
     text = text.replace(controlCharRegex, '');
     fixesCount++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `Control Character Cleanup: Removed ${controlMatches.length} non-printable control character(s) from document stream.`,
@@ -89,7 +90,7 @@ export function repairDocument(
       confidenceScore = 95;
     } else {
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'info',
         message: 'JSON Structure verified syntactically valid.',
@@ -117,7 +118,7 @@ export function repairDocument(
     text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     fixesCount++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'Line Ending Normalization: Unified mixed CR/LF/CRLF line endings to LF.',
@@ -131,7 +132,7 @@ export function repairDocument(
     if (text.length > 0) {
       fixesCount += 2;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'repair',
         message: `Deep Text Recovery: Extracted ${text.length} characters of readable text from corrupted binary data using pattern analysis.`,
@@ -142,7 +143,7 @@ export function repairDocument(
       fixesCount++;
       confidenceScore = 50;
       logs.push({
-        id: crypto.randomUUID(),
+        id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'warning',
         message: 'No recoverable text content found in the corrupted file. Generated recovery report.',
@@ -248,7 +249,7 @@ function repairJsonSyntax(raw: string): { reconstructedText: string; fixes: numb
     text = text.replace(commentRegex, '').replace(blockCommentRegex, '');
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'JSON Comment Stripping: Removed non-standard JavaScript comments from JSON stream.',
@@ -285,7 +286,7 @@ function repairJsonSyntax(raw: string): { reconstructedText: string; fixes: numb
         if (fixes === 0 || !logs.some(l => l.message.includes('single quotes'))) {
           fixes++;
           logs.push({
-            id: crypto.randomUUID(),
+            id: safeRandomUUID(),
             timestamp: new Date().toLocaleTimeString(),
             type: 'repair',
             message: 'JSON Quote Normalization: Converted single-quoted strings to standard double-quoted JSON strings.',
@@ -322,7 +323,7 @@ function repairJsonSyntax(raw: string): { reconstructedText: string; fixes: numb
   if (text !== beforeUnquoted) {
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'JSON Key Quoting: Restored double quotes around unquoted identifier keys.',
@@ -336,7 +337,7 @@ function repairJsonSyntax(raw: string): { reconstructedText: string; fixes: numb
   if (text !== beforeTrailing) {
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'JSON Trailing Comma Cleansing: Stripped illegal trailing commas before closing brackets.',
@@ -371,7 +372,7 @@ function repairJsonSyntax(raw: string): { reconstructedText: string; fixes: numb
     text += '"';
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'JSON String Closure: Closed dangling unclosed string literal at file boundary.',
@@ -390,7 +391,7 @@ function repairJsonSyntax(raw: string): { reconstructedText: string; fixes: numb
     text += suffix;
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `JSON Structural Balancing: Appended ${bracketDepth + braceDepth} missing closing token(s): "${suffix}".`,
@@ -406,7 +407,7 @@ function repairJsonSyntax(raw: string): { reconstructedText: string; fixes: numb
     const parsed = JSON.parse(text);
     text = JSON.stringify(parsed, null, 2);
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'success',
       message: 'JSON Validation Passed: Repaired JSON parsed successfully and formatted into pretty-printed output.',
@@ -414,7 +415,7 @@ function repairJsonSyntax(raw: string): { reconstructedText: string; fixes: numb
     fixes++;
   } catch {
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'warning',
       message: 'JSON Best-Effort: Applied all available repairs. Some structural issues may remain.',
@@ -437,7 +438,7 @@ function repairXmlStructure(raw: string, ext: string): { reconstructedText: stri
     text = '<?xml version="1.0" encoding="UTF-8"?>\n' + text;
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'XML Header Restored: Injected <?xml version="1.0"?> declaration signature.',
@@ -449,7 +450,7 @@ function repairXmlStructure(raw: string, ext: string): { reconstructedText: stri
     text = '<!DOCTYPE html>\n' + text;
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'HTML DOCTYPE Restored: Injected <!DOCTYPE html> declaration.',
@@ -486,7 +487,7 @@ function repairXmlStructure(raw: string, ext: string): { reconstructedText: stri
     text += '\n' + closingTags;
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `XML/HTML Tag Balancing: Closed ${openTags.length} unclosed tag(s): ${openTags.map(t => `<${t}>`).join(', ')}.`,
@@ -500,7 +501,7 @@ function repairXmlStructure(raw: string, ext: string): { reconstructedText: stri
   if (text !== beforeAttr) {
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: 'HTML/XML Attribute Quoting: Added missing quotes around unquoted attribute values.',
@@ -569,7 +570,7 @@ function repairCsvStructure(raw: string): { reconstructedText: string; fixes: nu
     text = repairedLines.join('\n');
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `CSV Structure Repair: Fixed column count in ${fixedRows} row(s) to match ${headerCols}-column header (delimiter: "${bestDelimiter === '\t' ? 'TAB' : bestDelimiter}").`,
@@ -591,7 +592,7 @@ function repairCsvStructure(raw: string): { reconstructedText: string; fixes: nu
     text = finalLines.join('\n');
     fixes++;
     logs.push({
-      id: crypto.randomUUID(),
+      id: safeRandomUUID(),
       timestamp: new Date().toLocaleTimeString(),
       type: 'repair',
       message: `CSV Quote Balancing: Fixed unbalanced quotes on ${unbalancedQuoteLines.length} line(s).`,
