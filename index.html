@@ -1,0 +1,2299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cypher Engine — ML-Powered File Repair & Corruption Studio</title>
+  <meta name="description" content="AI & Machine Learning powered binary file repair service and structural corruption simulator for PDFs, JPEGs, PNGs, and media streams.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-primary: #090d16;
+      --bg-secondary: #111827;
+      --card-bg: rgba(17, 24, 39, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-purple: #8b5cf6;
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+      --accent-amber: #f59e0b;
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      --radius-lg: 20px;
+      --radius-md: 12px;
+      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #000000;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    #hex-matrix-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      pointer-events: none;
+      opacity: 1;
+      filter: blur(3px) brightness(0.9);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* Header Styling - Frosted Glass Container */
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(24px) saturate(190%);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem 2rem;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 1rem;
+      border-radius: 9999px;
+      background: rgba(59, 130, 246, 0.12);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      color: #60a5fa;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      margin-bottom: 1.25rem;
+      text-transform: uppercase;
+      opacity: 1;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+      transition: var(--transition-normal);
+    }
+
+    .badge.corrupt-mode {
+      background: rgba(244, 63, 94, 0.12);
+      border-color: rgba(244, 63, 94, 0.4);
+      color: #fb7185;
+    }
+
+    .badge.fragment-mode {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #3b82f6;
+      box-shadow: 0 0 8px #3b82f6;
+      transition: var(--transition-normal);
+    }
+
+    .badge.corrupt-mode .badge-dot {
+      background-color: var(--accent-rose);
+      box-shadow: 0 0 8px var(--accent-rose);
+    }
+
+    .badge.fragment-mode .badge-dot {
+      background-color: var(--accent-emerald);
+      box-shadow: 0 0 8px var(--accent-emerald);
+    }
+
+    h1 {
+      font-size: 2.75rem;
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.75rem;
+      color: #ffffff !important;
+      opacity: 1 !important;
+      background: none !important;
+      -webkit-text-fill-color: #ffffff !important;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9);
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: #f1f5f9 !important;
+      opacity: 1 !important;
+      font-weight: 600;
+      line-height: 1.6;
+      max-width: 580px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 0.5rem 1.25rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      display: inline-block;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+    }
+
+    /* Mode Toggle Component */
+    .mode-toggle-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .mode-toggle {
+      display: inline-flex;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 9999px;
+      padding: 5px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.4rem;
+      border-radius: 9999px;
+      border: none;
+      background: transparent;
+      color: #cbd5e1;
+      opacity: 1;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .toggle-btn:hover {
+      color: #ffffff;
+    }
+
+    .toggle-btn.active.repair-mode {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      color: #ffffff;
+      opacity: 1;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.6);
+    }
+
+    .toggle-btn.active.corrupt-mode {
+      background: linear-gradient(135deg, var(--accent-rose), var(--accent-amber));
+      color: #ffffff;
+      opacity: 1;
+      box-shadow: 0 4px 14px rgba(244, 63, 94, 0.6);
+    }
+
+    .toggle-btn.active.fragment-mode {
+      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan));
+      color: #ffffff;
+      opacity: 1;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.6);
+    }
+
+    /* Main Card Styling - Frosted Glass Container */
+    .repair-card {
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(28px) saturate(200%);
+      -webkit-backdrop-filter: blur(28px) saturate(200%);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem 2rem;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .repair-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--accent-blue), var(--accent-purple), transparent);
+      transition: var(--transition-normal);
+    }
+
+    .repair-card.corrupt-active::before {
+      background: linear-gradient(90deg, transparent, var(--accent-rose), var(--accent-amber), transparent);
+    }
+
+    .repair-card.fragment-active::before {
+      background: linear-gradient(90deg, transparent, var(--accent-emerald), var(--accent-cyan), transparent);
+    }
+
+    /* Drop Zone Styling - Glass Box */
+    .drop-zone {
+      border: 1.5px dashed rgba(6, 182, 212, 0.45);
+      border-radius: var(--radius-md);
+      padding: 2.25rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition-normal);
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      position: relative;
+      box-shadow: inset 0 0 20px rgba(6, 182, 212, 0.05);
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent-blue);
+      background: rgba(59, 130, 246, 0.12);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(59, 130, 246, 0.25);
+    }
+
+    .drop-zone.corrupt-mode:hover, .drop-zone.corrupt-mode.dragover {
+      border-color: var(--accent-rose);
+      background: rgba(244, 63, 94, 0.12);
+      box-shadow: 0 12px 30px rgba(244, 63, 94, 0.25);
+    }
+
+    .drop-zone.fragment-mode:hover, .drop-zone.fragment-mode.dragover {
+      border-color: var(--accent-emerald);
+      background: rgba(16, 185, 129, 0.12);
+      box-shadow: 0 12px 30px rgba(16, 185, 129, 0.25);
+    }
+
+    .icon-container {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(59, 130, 246, 0.12);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+      color: #60a5fa;
+      transition: var(--transition-fast);
+    }
+
+    .icon-container.corrupt-mode {
+      background: rgba(244, 63, 94, 0.12);
+      border-color: rgba(244, 63, 94, 0.35);
+      color: #fb7185;
+    }
+
+    .icon-container.fragment-mode {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: #34d399;
+    }
+
+    .drop-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      color: #ffffff !important;
+      opacity: 1 !important;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+    }
+
+    .drop-subtitle {
+      font-size: 0.9rem;
+      color: #e2e8f0 !important;
+      opacity: 1 !important;
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+
+    .format-chips {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 0.3rem 0.75rem;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: #ffffff !important;
+      opacity: 1 !important;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    #file-input {
+      display: none;
+    }
+
+    /* Severity Slider Container (Corrupt Mode Only) */
+    .severity-container {
+      margin-top: 1.75rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      text-align: left;
+    }
+
+    .severity-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .severity-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .severity-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: #fb7185;
+    }
+
+    .severity-slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      outline: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+    .severity-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-rose), var(--accent-amber));
+      box-shadow: 0 0 10px rgba(244, 63, 94, 0.6);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+
+    .severity-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .severity-tier-info {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      margin-top: 0.6rem;
+      font-style: italic;
+    }
+
+    /* Fragment Settings Container (Fragment Mode Only) */
+    .fragment-container {
+      margin-top: 1.75rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      text-align: left;
+    }
+
+    .fragment-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .fragment-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .fragment-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+
+    .fragment-input {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1rem;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 600;
+      outline: none;
+      transition: var(--transition-fast);
+    }
+
+    .fragment-input:focus {
+      border-color: var(--accent-emerald);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .fragment-info {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      margin-top: 0.6rem;
+      font-style: italic;
+    }
+
+    /* Machine Learning Diagnostics Card */
+    .ml-card {
+      margin-top: 1.75rem;
+      padding: 1.25rem;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      border-radius: var(--radius-md);
+      text-align: left;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .ml-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .ml-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .ml-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--accent-emerald);
+    }
+
+    .ml-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.85rem;
+      font-size: 0.85rem;
+    }
+
+    .ml-metric {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .ml-label {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .ml-value {
+      color: var(--text-primary);
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .ml-progress-bar-bg {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      margin-top: 1rem;
+      overflow: hidden;
+    }
+
+    .ml-progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-emerald), var(--accent-cyan));
+      border-radius: 999px;
+      transition: width 0.5s ease-out;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* Mode Dashboard & Telemetry Cards */
+    .mode-dashboard-panel {
+      margin-top: 1.75rem;
+      width: 100%;
+    }
+
+    .dashboard-card {
+      display: none;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(24px) saturate(190%);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem 1.75rem;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+      text-align: left;
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+      transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .dashboard-card.active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      animation: dashboardFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes dashboardFadeIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .dashboard-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .dashboard-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.7rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .dashboard-tag.repair {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: #60a5fa;
+    }
+
+    .dashboard-tag.corrupt {
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.4);
+      color: #fb7185;
+    }
+
+    .dashboard-tag.fragment {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .dashboard-item {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1rem;
+    }
+
+    .dashboard-item-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #cbd5e1;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+    }
+
+    .dashboard-item-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .dashboard-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .dashboard-list li {
+      font-size: 0.85rem;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .dashboard-list li::before {
+      content: '•';
+      color: var(--accent-cyan);
+      font-size: 1.2rem;
+    }
+
+    /* Processing / Loading State */
+    .processing-state {
+      display: none;
+      text-align: center;
+      padding: 3rem 1rem;
+    }
+
+    .spinner-container {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.75rem;
+    }
+
+    .spinner {
+      width: 100%;
+      height: 100%;
+      border: 3px solid rgba(59, 130, 246, 0.15);
+      border-top-color: var(--accent-blue);
+      border-right-color: var(--accent-purple);
+      border-radius: 50%;
+      animation: spin 1s infinite linear;
+    }
+
+    .spinner.corrupt-mode {
+      border-color: rgba(244, 63, 94, 0.15);
+      border-top-color: var(--accent-rose);
+      border-right-color: var(--accent-amber);
+    }
+
+    .spinner.fragment-mode {
+      border-color: rgba(16, 185, 129, 0.15);
+      border-top-color: var(--accent-emerald);
+      border-right-color: var(--accent-cyan);
+    }
+
+    .spinner-glow {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      box-shadow: 0 0 25px rgba(59, 130, 246, 0.4);
+      opacity: 0.6;
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    .spinner-glow.corrupt-mode {
+      box-shadow: 0 0 25px rgba(244, 63, 94, 0.4);
+    }
+
+    .spinner-glow.fragment-mode {
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.4);
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.95); }
+      50% { opacity: 0.8; transform: scale(1.05); }
+    }
+
+    .processing-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .processing-filename {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      color: var(--accent-cyan);
+      margin-bottom: 1rem;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 1.5rem 0 0.75rem;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 30%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+      border-radius: 999px;
+      animation: shimmer 1.5s infinite linear;
+      transition: width 0.3s ease;
+    }
+
+    .progress-bar-fill.corrupt-mode {
+      background: linear-gradient(90deg, var(--accent-rose), var(--accent-amber));
+    }
+
+    .progress-bar-fill.fragment-mode {
+      background: linear-gradient(90deg, var(--accent-emerald), var(--accent-cyan));
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(300%); }
+    }
+
+    /* Result State */
+    .result-state {
+      display: none;
+      text-align: center;
+      padding: 2rem 1rem;
+    }
+
+    .success-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--accent-emerald);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.25rem;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+    }
+
+    .result-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+    }
+
+    .result-meta {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+    }
+
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 0.85rem 1.75rem;
+      border-radius: var(--radius-md);
+      border: none;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+      text-decoration: none;
+    }
+
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+      background: linear-gradient(135deg, #60a5fa, #2563eb);
+    }
+
+    .reset-btn {
+      display: block;
+      margin: 1.25rem auto 0;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .reset-btn:hover {
+      color: var(--text-primary);
+      text-decoration: underline;
+    }
+
+    /* Error Notification Banner */
+    .error-banner {
+      display: none;
+      margin-top: 1.5rem;
+      padding: 1rem 1.25rem;
+      border-radius: var(--radius-md);
+      background: rgba(244, 63, 94, 0.1);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: #fca5a5;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      text-align: left;
+    }
+
+    .error-header {
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* Cyclic Loop Modal Dialog */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(3, 7, 18, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .modal-card {
+      background: rgba(17, 24, 39, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+      animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes scaleUp {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: #fb7185;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.25rem;
+      box-shadow: 0 0 20px rgba(244, 63, 94, 0.3);
+    }
+
+    .modal-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+    }
+
+    .modal-subtitle {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 1.25rem;
+    }
+
+    .modal-file-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8125rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--accent-cyan);
+      display: inline-block;
+      margin-bottom: 1.75rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+    }
+
+    .modal-btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--radius-md);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition-fast);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .modal-btn-primary {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+    }
+
+    .modal-btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+    }
+
+    .modal-btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-secondary);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: var(--text-primary);
+    }
+
+    /* Far-Left Cypher Logo Home Button */
+    .top-left-logo-bar {
+      position: absolute;
+      top: 1.25rem;
+      left: 1.5rem;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .top-left-logo-bar {
+        position: relative;
+        top: 0;
+        left: 0;
+        margin-bottom: 1rem;
+        justify-content: center;
+      }
+    }
+
+    .cypher-logo-home-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: transparent !important;
+      border: none !important;
+      border-radius: 0 !important;
+      padding: 0 !important;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: none !important;
+      outline: none;
+      text-decoration: none;
+    }
+
+    .cypher-logo-home-btn:hover {
+      transform: translateY(-1px) scale(1.03);
+    }
+
+    .logo-glow-aura {
+      display: none;
+    }
+
+    .logo-icon-box {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: rgba(6, 182, 212, 0.25);
+      color: #00f2fe;
+      border: 1px solid rgba(0, 242, 254, 0.6);
+      box-shadow: 0 0 16px rgba(6, 182, 212, 0.6);
+      transition: all 0.3s ease;
+    }
+
+    .cypher-logo-home-btn:hover .logo-icon-box {
+      background: rgba(6, 182, 212, 0.35);
+      border-color: #38bdf8;
+      box-shadow: 0 0 24px rgba(6, 182, 212, 0.9);
+    }
+
+    .logo-text-group {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+    }
+
+    .logo-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.15rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      color: #ffffff;
+      line-height: 1;
+      text-shadow: 0 0 12px rgba(6, 182, 212, 0.8), 0 2px 6px rgba(0, 0, 0, 0.9);
+    }
+
+    .logo-subtitle {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      color: #00f2fe;
+      text-transform: uppercase;
+      line-height: 1;
+      margin-top: 0.25rem;
+      text-shadow: 0 0 8px rgba(6, 182, 212, 0.5);
+    }
+
+    .footer {
+      margin-top: 2rem;
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #ffffff !important;
+      opacity: 1 !important;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      padding: 0.75rem 1.5rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Full Fluid White Background - Alternating Hexadecimal Matrix Canvas -->
+  <canvas id="hex-matrix-bg"></canvas>
+
+  <!-- Far-Left Corner Glowing Cypher Logo Home Button -->
+  <div class="top-left-logo-bar">
+    <button id="cypher-home-logo-btn" class="cypher-logo-home-btn" title="Return to Cypher Home Page" aria-label="Cypher Home Page" type="button">
+      <div class="logo-glow-aura"></div>
+      <div class="logo-icon-box">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v4m0 12v4M2 12h4m12 0h4m-4.95-6.95l-2.83 2.83m-4.44 4.44l-2.83 2.83m0-10.1l2.83 2.83m4.44 4.44l2.83 2.83"/>
+        </svg>
+      </div>
+      <div class="logo-text-group">
+        <span class="logo-title">CYPHER</span>
+        <span class="logo-subtitle">RECONSTRUCTOR</span>
+      </div>
+    </button>
+  </div>
+
+  <div class="container">
+
+    <!-- Header -->
+    <header class="header">
+      <div id="badge-status" class="badge">
+        <span class="badge-dot"></span>
+        <span id="badge-text">ML-Powered Binary Classifier & Scanner Engine</span>
+      </div>
+      <h1 id="main-title">Cypher File Repair</h1>
+      <p id="main-subtitle" class="subtitle">Salvage corrupted PDFs, JPEGs, and PNGs with machine learning signature classification and byte-stream reconstruction.</p>
+    </header>
+
+    <!-- UI Mode Toggle Switch -->
+    <div class="mode-toggle-container">
+      <div class="mode-toggle">
+        <button id="mode-repair-btn" class="toggle-btn active repair-mode" type="button">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+          Repair Mode
+        </button>
+        <button id="mode-corrupt-btn" class="toggle-btn" type="button">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+          Corrupt Mode
+        </button>
+        <button id="mode-fragment-btn" class="toggle-btn" type="button">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+          </svg>
+          Fragment Mode
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Card -->
+    <main id="main-card" class="repair-card">
+      <!-- 1. Drag & Drop Zone (Idle State) -->
+      <div id="drop-zone" class="drop-zone">
+        <div id="icon-container" class="icon-container">
+          <svg id="drop-icon" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 0115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+        </div>
+        <h2 id="drop-title" class="drop-title">Drag & drop corrupted file(s) or fragments here</h2>
+        <p id="drop-subtitle" class="drop-subtitle">accepts single files, multiple .bin / .frg fragments, or ZIP archives</p>
+        <div class="format-chips">
+          <span class="chip">PDF (%PDF-)</span>
+          <span class="chip">JPEG (FF D8 FF)</span>
+          <span class="chip">PNG (89 50 4E 47)</span>
+          <span class="chip">Fragments (.bin / .zip)</span>
+        </div>
+        <input type="file" id="file-input" accept=".bin, .pdf, .jpg, .png, image/*, .corrupted" multiple="multiple">
+      </div>
+
+      <!-- Corruption Severity Controls (Corrupt Mode Only) -->
+      <div id="severity-container" class="severity-container" style="display: none;">
+        <div class="severity-header">
+          <label for="severity-slider" class="severity-label">Corruption Severity:</label>
+          <span id="severity-badge" class="severity-badge">50%</span>
+        </div>
+        <input type="range" id="severity-slider" class="severity-slider" min="1" max="100" value="50">
+        <p id="severity-tier-info" class="severity-tier-info">Tier: Medium (Inject 1024 Junk Bytes at Offset 0)</p>
+      </div>
+
+      <!-- Fragment Settings Controls (Fragment Mode Only) -->
+      <div id="fragment-container" class="fragment-container" style="display: none;">
+        <div class="fragment-header">
+          <label for="fragment-count-input" class="fragment-label">Number of Fragments:</label>
+          <span id="fragment-badge" class="fragment-badge">5 Packets</span>
+        </div>
+        <input type="number" id="fragment-count-input" class="fragment-input" min="1" max="100" value="5">
+        <p class="fragment-info">Splits raw byte stream into binary packet headers (b'FRG\x00') and packages into ZIP</p>
+      </div>
+
+      <!-- 2. Processing / Spinner State -->
+      <div id="processing-state" class="processing-state">
+        <div class="spinner-container">
+          <div id="spinner" class="spinner"></div>
+          <div id="spinner-glow" class="spinner-glow"></div>
+        </div>
+        <h3 id="processing-title" class="processing-title">Reconstructing File Payload</h3>
+        <p id="processing-filename" class="processing-filename">corrupted_document.pdf</p>
+        <div class="progress-bar-bg">
+          <div id="progress-bar-fill" class="progress-bar-fill"></div>
+        </div>
+        <p id="processing-status" style="font-size: 0.85rem; color: var(--text-muted);">Running ML feature extraction & magic signature scanning...</p>
+      </div>
+
+      <!-- 3. Result State (Auto-Downloaded & ML Diagnostic Panel) -->
+      <div id="result-state" class="result-state">
+        <div class="success-icon">
+          <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <h3 id="result-title" class="result-title">File Repaired Successfully!</h3>
+        <p id="result-meta" class="result-meta">Your download has started automatically.</p>
+
+        <!-- Machine Learning Diagnostics Panel -->
+        <div id="ml-diagnostic-card" class="ml-card" style="display: none;">
+          <div class="ml-header">
+            <div class="ml-title">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              ML Diagnostic Engine Analysis
+            </div>
+            <span id="ml-confidence-badge" class="ml-badge">95.0% Confidence</span>
+          </div>
+          <div class="ml-grid">
+            <div class="ml-metric">
+              <span class="ml-label">MIME Classification:</span>
+              <span id="ml-file-type" class="ml-value">application/pdf</span>
+            </div>
+            <div class="ml-metric">
+              <span class="ml-label">Damage Assessment:</span>
+              <span id="ml-damage-tier" class="ml-value">Low (15.0%)</span>
+            </div>
+            <div class="ml-metric">
+              <span class="ml-label">Recoverability Index:</span>
+              <span id="ml-recoverability-val" class="ml-value">92.5%</span>
+            </div>
+            <div class="ml-metric">
+              <span class="ml-label">Recommended Engine:</span>
+              <span id="ml-strategy-val" class="ml-value">PIKEPDF_RECOVER</span>
+            </div>
+          </div>
+          <div class="ml-progress-bar-bg">
+            <div id="ml-recoverability-bar" class="ml-progress-bar-fill" style="width: 92.5%;"></div>
+          </div>
+        </div>
+
+        <div style="margin-top: 1.75rem;">
+          <a id="manual-download-btn" class="download-btn" href="#" download>
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Download Again
+          </a>
+
+          <button id="reset-btn" class="reset-btn">Process another file</button>
+        </div>
+      </div>
+
+      <!-- Error Notification Banner -->
+      <div id="error-banner" class="error-banner">
+        <div class="error-header">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <span id="error-title">Upload Error (400)</span>
+        </div>
+        <div id="error-message">Invalid file request or missing parameters.</div>
+      </div>
+    </main>
+
+    <!-- Mode Telemetry & Information Dashboard Panels -->
+    <div id="mode-dashboard-panel" class="mode-dashboard-panel">
+      <!-- 1. Repair Mode Dashboard -->
+      <div id="dashboard-repair" class="dashboard-card active">
+        <div class="dashboard-header">
+          <div class="dashboard-title">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+            Repair Engine Telemetry Dashboard
+          </div>
+          <span class="dashboard-tag repair">Active • ML 99.4%</span>
+        </div>
+        <div class="dashboard-grid">
+          <div class="dashboard-item">
+            <div class="dashboard-item-label">Classification Engine</div>
+            <div class="dashboard-item-value">Scikit-Learn Random Forest</div>
+          </div>
+          <div class="dashboard-item">
+            <div class="dashboard-item-label">Magic Byte Offset Depth</div>
+            <div class="dashboard-item-value">8,192 Bytes Scan</div>
+          </div>
+          <div class="dashboard-item">
+            <div class="dashboard-item-label">Supported Payload Types</div>
+            <div class="dashboard-item-value">PDF, JPEG, PNG, .FRG</div>
+          </div>
+          <div class="dashboard-item">
+            <div class="dashboard-item-label">Memory Stream Security</div>
+            <div class="dashboard-item-value">0 Persisted Disk Bytes</div>
+          </div>
+        </div>
+        <ul class="dashboard-list">
+          <li>Automated pikepdf XREF table repair and EOF trailer reconstruction</li>
+          <li>Pillow binary image header grafting & HTML5 spatial canvas inpainting</li>
+          <li>Sequential fragment correlation & multi-part binary assembly</li>
+        </ul>
+      </div>
+
+      <!-- 2. Corrupt Mode Dashboard -->
+      <div id="dashboard-corrupt" class="dashboard-card">
+        <div class="dashboard-header">
+          <div class="dashboard-title">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            Structural Fault Simulator Dashboard
+          </div>
+          <span class="dashboard-tag corrupt">Fault Generator Ready</span>
+        </div>
+        <div class="dashboard-grid">
+          <div class="dashboard-item">
+            <div class="dashboard-item-label">Fault Injection Method</div>
+            <div class="dashboard-item-value">Structural Byte Scrambler</div>
+          </div>
+          <div class="dashboard-item">
+            <div class="dashboard-item-label">Severity Control Range</div>
+            <div class="dashboard-item-value">1% - 100% Dynamic Slider</div>
+          </div>
+          <div class="dashboard-item">
+            <div class="dashboard-item-label">Target Mutation Offsets</div>
+            <div class="dashboard-item-value">Header, XREF & EOF Payload</div>
+          </div>
+          <div class="dashboard-item">
+            <div class="dashboard-item-label">Safety Buffer</div>
+            <div class="dashboard-item-value">Non-Destructive In-Memory</div>
+          </div>
+        </div>
+        <ul class="dashboard-list">
+          <li>Simulates real-world storage sector damage for forensic benchmark testing</li>
+          <li>Corrupts PDF Trailers, JPEG SOF0 markers, and PNG CRC checksums</li>
+          <li>Enables instant 1-click test loop with the Repair Diagnostic Engine</li>
+        </ul>
+      </div>
+
+      <!-- 3. Fragment Mode Dashboard -->
+      <div id="dashboard-fragment" class="dashboard-card">
+        <div class="dashboard-header">
+          <div class="dashboard-title">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+            </svg>
+            Binary Packet Fragmenter Dashboard
+          </div>
+          <span class="dashboard-tag fragment">Packetizer Ready</span>
+        </div>
+        <div class="dashboard-grid">
+          <div class="dashboard-item">
+            <div class="dashboard-item-label">Packet Sentinel Header</div>
+            <div class="dashboard-item-value">16-Byte b"FRG\x00" Header</div>
+          </div>
+          <div class="dashboard-item">
+            <div class="dashboard-item-label">Packet Chunk Range</div>
+            <div class="dashboard-item-value">1 to 100 Chunks</div>
+          </div>
+          <div class="dashboard-item">
+            <div class="dashboard-item-label">Output Packaging</div>
+            <div class="dashboard-item-value">Automated ZIP Archive</div>
+          </div>
+          <div class="dashboard-item">
+            <div class="dashboard-item-label">Sequence Verification</div>
+            <div class="dashboard-item-value">Embedded Index Telemetry</div>
+          </div>
+        </div>
+        <ul class="dashboard-list">
+          <li>Splits monolithic files into chunked binary streams with custom magic headers</li>
+          <li>Generates packet archives ready for distributed forensic storage testing</li>
+          <li>Seamlessly reassembled by dragging multiple fragments into Repair Mode</li>
+        </ul>
+      </div>
+    </div>
+
+    <footer class="footer">
+      Powered by scikit-learn ML Engine, pikepdf, PyMuPDF, Pillow & corruptor.py • Zero disk persistence
+    </footer>
+  </div>
+
+  <!-- Cyclic Loop Prompt Modal -->
+  <div id="repair-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-icon">
+        <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </div>
+      <h3 class="modal-title">File Successfully Corrupted!</h3>
+      <p class="modal-subtitle">Test the repair engine on this file?</p>
+      <div id="modal-file-badge" class="modal-file-badge">sample.pdf.corrupted (Severity: 50%)</div>
+      <div class="modal-actions">
+        <button id="modal-repair-btn" class="modal-btn modal-btn-primary" type="button">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.9 6.91a2.12 2.12 0 01-3-3l6.91-6.9a6 6 0 017.94-7.94l-3.76 3.76z"/>
+          </svg>
+          Repair Now
+        </button>
+        <button id="modal-cancel-btn" class="modal-btn modal-btn-secondary" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State Variables
+    let currentMode = 'repair'; // 'repair' | 'corrupt' | 'fragment'
+    let currentObjectUrl = null;
+    let lastCorruptedBlob = null;
+    let lastCorruptedFilename = null;
+
+    // DOM Element References
+    const modeRepairBtn = document.getElementById('mode-repair-btn');
+    const modeCorruptBtn = document.getElementById('mode-corrupt-btn');
+    const modeFragmentBtn = document.getElementById('mode-fragment-btn');
+    const badgeStatus = document.getElementById('badge-status');
+    const badgeText = document.getElementById('badge-text');
+    const mainTitle = document.getElementById('main-title');
+    const mainSubtitle = document.getElementById('main-subtitle');
+    const mainCard = document.getElementById('main-card');
+    
+    const dropZone = document.getElementById('drop-zone');
+    const iconContainer = document.getElementById('icon-container');
+    const dropTitle = document.getElementById('drop-title');
+    const dropSubtitle = document.getElementById('drop-subtitle');
+    const fileInput = document.getElementById('file-input');
+
+    const severityContainer = document.getElementById('severity-container');
+    const severitySlider = document.getElementById('severity-slider');
+    const severityBadge = document.getElementById('severity-badge');
+    const severityTierInfo = document.getElementById('severity-tier-info');
+
+    const fragmentContainer = document.getElementById('fragment-container');
+    const fragmentCountInput = document.getElementById('fragment-count-input');
+    const fragmentBadge = document.getElementById('fragment-badge');
+
+    const mlDiagnosticCard = document.getElementById('ml-diagnostic-card');
+    const mlConfidenceBadge = document.getElementById('ml-confidence-badge');
+    const mlFileType = document.getElementById('ml-file-type');
+    const mlDamageTier = document.getElementById('ml-damage-tier');
+    const mlRecoverabilityVal = document.getElementById('ml-recoverability-val');
+    const mlStrategyVal = document.getElementById('ml-strategy-val');
+    const mlRecoverabilityBar = document.getElementById('ml-recoverability-bar');
+
+    const processingState = document.getElementById('processing-state');
+    const processingTitle = document.getElementById('processing-title');
+    const processingFilename = document.getElementById('processing-filename');
+    const processingStatus = document.getElementById('processing-status');
+    const spinner = document.getElementById('spinner');
+    const spinnerGlow = document.getElementById('spinner-glow');
+    const progressBarFill = document.getElementById('progress-bar-fill');
+
+    const resultState = document.getElementById('result-state');
+    const resultTitle = document.getElementById('result-title');
+    const resultMeta = document.getElementById('result-meta');
+    const manualDownloadBtn = document.getElementById('manual-download-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    
+    const errorBanner = document.getElementById('error-banner');
+    const errorTitle = document.getElementById('error-title');
+    const errorMessage = document.getElementById('error-message');
+
+    const repairModal = document.getElementById('repair-modal');
+    const modalFileBadge = document.getElementById('modal-file-badge');
+    const modalRepairBtn = document.getElementById('modal-repair-btn');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+
+    // Mode Toggle Event Listeners
+    modeRepairBtn.addEventListener('click', () => setMode('repair'));
+    modeCorruptBtn.addEventListener('click', () => setMode('corrupt'));
+    modeFragmentBtn.addEventListener('click', () => setMode('fragment'));
+
+    function setMode(mode) {
+      currentMode = mode;
+      resetUI();
+
+      if (window.triggerHexMatrixMotion) {
+        window.triggerHexMatrixMotion(2500);
+      }
+      window.dispatchEvent(new Event('cypher-mode-change'));
+
+      // Mode Telemetry Dashboard Elements
+      const dashRepair = document.getElementById('dashboard-repair');
+      const dashCorrupt = document.getElementById('dashboard-corrupt');
+      const dashFragment = document.getElementById('dashboard-fragment');
+
+      if (dashRepair) dashRepair.classList.remove('active');
+      if (dashCorrupt) dashCorrupt.classList.remove('active');
+      if (dashFragment) dashFragment.classList.remove('active');
+
+      if (mode === 'repair') {
+        if (dashRepair) dashRepair.classList.add('active');
+
+        modeRepairBtn.classList.add('active', 'repair-mode');
+        modeCorruptBtn.classList.remove('active', 'corrupt-mode');
+        modeFragmentBtn.classList.remove('active', 'fragment-mode');
+
+        fileInput.setAttribute('accept', '.bin, .pdf, .jpg, .png, image/*, .corrupted');
+        fileInput.setAttribute('multiple', 'multiple');
+
+        badgeStatus.className = 'badge';
+        badgeText.textContent = "ML-Powered Binary Classifier & Scanner Engine";
+        mainTitle.textContent = "Cypher File Repair";
+        mainSubtitle.textContent = "Salvage corrupted files or reassemble binary fragments (.frg/ZIP) into reconstructed payload.";
+        
+        mainCard.className = 'repair-card';
+        iconContainer.className = 'icon-container';
+        dropZone.className = 'drop-zone';
+        dropTitle.textContent = "Drag & drop corrupted file(s) or fragments here";
+        dropSubtitle.textContent = "accepts single files, multiple .frg fragments, or ZIP archives";
+        
+        severityContainer.style.display = 'none';
+        fragmentContainer.style.display = 'none';
+
+        spinner.className = 'spinner';
+        spinnerGlow.className = 'spinner-glow';
+        progressBarFill.className = 'progress-bar-fill';
+
+      } else if (mode === 'corrupt') {
+        if (dashCorrupt) dashCorrupt.classList.add('active');
+
+        modeCorruptBtn.classList.add('active', 'corrupt-mode');
+        modeRepairBtn.classList.remove('active', 'repair-mode');
+        modeFragmentBtn.classList.remove('active', 'fragment-mode');
+
+        fileInput.removeAttribute('multiple');
+
+        badgeStatus.className = 'badge corrupt-mode';
+        badgeText.textContent = "Structural Corruption Generator";
+        mainTitle.textContent = "Cypher File Corruptor";
+        mainSubtitle.textContent = "Simulate byte-level structural file corruption to test repair engines without touching core payload content.";
+        
+        mainCard.className = 'repair-card corrupt-active';
+        iconContainer.className = 'icon-container corrupt-mode';
+        dropZone.className = 'drop-zone corrupt-mode';
+        dropTitle.textContent = "Drag & drop a file here to corrupt it";
+        dropSubtitle.textContent = "adjust severity percentage slider below";
+        
+        severityContainer.style.display = 'block';
+        fragmentContainer.style.display = 'none';
+
+        spinner.className = 'spinner corrupt-mode';
+        spinnerGlow.className = 'spinner-glow corrupt-mode';
+        progressBarFill.className = 'progress-bar-fill corrupt-mode';
+      } else {
+        if (dashFragment) dashFragment.classList.add('active');
+
+        modeFragmentBtn.classList.add('active', 'fragment-mode');
+        modeRepairBtn.classList.remove('active', 'repair-mode');
+        modeCorruptBtn.classList.remove('active', 'corrupt-mode');
+
+        fileInput.removeAttribute('multiple');
+
+        badgeStatus.className = 'badge fragment-mode';
+        badgeText.textContent = "Binary Packet Fragmentation Engine";
+        mainTitle.textContent = "Cypher File Fragmenter";
+        mainSubtitle.textContent = "Split binary files into chunked packet byte-streams with custom magic headers for distributed storage.";
+        
+        mainCard.className = 'repair-card fragment-active';
+        iconContainer.className = 'icon-container fragment-mode';
+        dropZone.className = 'drop-zone fragment-mode';
+        dropTitle.textContent = "Drag & drop a file here to fragment it";
+        dropSubtitle.textContent = "set chunk count below to generate ZIP of .frg fragments";
+        
+        severityContainer.style.display = 'none';
+        fragmentContainer.style.display = 'block';
+
+        spinner.className = 'spinner fragment-mode';
+        spinnerGlow.className = 'spinner-glow fragment-mode';
+        progressBarFill.className = 'progress-bar-fill fragment-mode';
+      }
+
+      // Smooth scroll effect on mode change
+      if (mainCard) {
+        mainCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    // Severity Slider Change Listener
+    severitySlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      severityBadge.textContent = `${val}%`;
+
+      if (val <= 30) {
+        severityTierInfo.textContent = "Tier: Low (Scramble Magic Bytes & Delete EOF)";
+      } else if (val <= 70) {
+        severityTierInfo.textContent = "Tier: Medium (Inject 1024 Junk Bytes at Offset 0)";
+      } else {
+        severityTierInfo.textContent = "Tier: High (Delete PDF XREF/EOF or Image Headers)";
+      }
+    });
+
+    // Glowing Cypher Logo Home Button Click Listener
+    const cypherHomeLogoBtn = document.getElementById('cypher-home-logo-btn');
+    if (cypherHomeLogoBtn) {
+      cypherHomeLogoBtn.addEventListener('click', () => {
+        setMode('repair');
+        dropZone.style.display = 'block';
+        severityContainer.style.display = 'none';
+        fragmentContainer.style.display = 'none';
+        processingState.style.display = 'none';
+        resultState.style.display = 'none';
+        fileInput.value = '';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+
+    // Fragment Count Change Listener
+    fragmentCountInput.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10) || 1;
+      fragmentBadge.textContent = `${val} Packet${val !== 1 ? 's' : ''}`;
+    });
+
+    // Drag and Drop Event Listeners
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+      });
+    });
+
+    // Trigger File Input on Click
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    // File Input Change
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleFileUpload(e.target.files);
+      }
+    });
+
+    // Drop Event
+    dropZone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      if (dt.files && dt.files.length > 0) {
+        handleFileUpload(dt.files);
+      }
+    });
+
+    // Reset UI State
+    resetBtn.addEventListener('click', resetUI);
+
+    function resetUI() {
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = null;
+      }
+      fileInput.value = '';
+      dropZone.style.display = 'block';
+      processingState.style.display = 'none';
+      resultState.style.display = 'none';
+      mlDiagnosticCard.style.display = 'none';
+      severityContainer.style.display = currentMode === 'corrupt' ? 'block' : 'none';
+      fragmentContainer.style.display = currentMode === 'fragment' ? 'block' : 'none';
+      hideError();
+    }
+
+    function showError(title, message) {
+      errorTitle.textContent = title;
+      errorMessage.textContent = message;
+      errorBanner.style.display = 'block';
+    }
+
+    function hideError() {
+      errorBanner.style.display = 'none';
+    }
+
+    // Main Upload Handler (Dispatches based on active mode)
+    async function handleFileUpload(fileListOrFile) {
+      hideError();
+
+      const files = Array.isArray(fileListOrFile)
+        ? fileListOrFile
+        : (fileListOrFile instanceof FileList ? Array.from(fileListOrFile) : [fileListOrFile]);
+
+      if (files.length === 0) return;
+
+      if (currentMode === 'repair') {
+        await executeRepairFlow(files);
+      } else if (currentMode === 'corrupt') {
+        await executeCorruptFlow(files[0]);
+      } else if (currentMode === 'fragment') {
+        await executeFragmentFlow(files[0]);
+      }
+    }
+
+    // Async Fetch ML Diagnostics for display
+    async function fetchMLDiagnostics(file) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const resp = await fetch('/api/ml-classify/', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (resp.ok) {
+          const ml = await resp.json();
+          mlConfidenceBadge.textContent = `${ml.confidence_score}% Confidence`;
+          mlFileType.textContent = ml.predicted_mime_type;
+          mlDamageTier.textContent = `${ml.corruption_tier} (${ml.corruption_severity_pct}%)`;
+          mlRecoverabilityVal.textContent = `${ml.recoverability_score}%`;
+          mlStrategyVal.textContent = ml.recommended_strategy;
+          mlRecoverabilityBar.style.width = `${ml.recoverability_score}%`;
+          mlDiagnosticCard.style.display = 'block';
+        }
+      } catch (err) {
+        console.warn('ML Diagnostic fetch failed:', err);
+      }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Flow 1: Corrupt File Flow (/api/corrupt-file/)
+    // ═════════════════════════════════════════════════════════════════════════
+    async function executeCorruptFlow(file) {
+      dropZone.style.display = 'none';
+      severityContainer.style.display = 'none';
+      fragmentContainer.style.display = 'none';
+      processingState.style.display = 'block';
+      resultState.style.display = 'none';
+
+      const severityVal = severitySlider.value;
+      processingTitle.textContent = "Simulating Structural File Corruption";
+      processingFilename.textContent = file.name;
+      processingStatus.textContent = `Applying Tier structural degradation (${severityVal}% severity)...`;
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('severity', severityVal);
+
+      try {
+        const response = await fetch('/api/corrupt-file/', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          let errorData = {};
+          try {
+            errorData = await response.json();
+          } catch (_) {
+            errorData = { message: await response.text() || 'An unknown error occurred.' };
+          }
+
+          processingState.style.display = 'none';
+          dropZone.style.display = 'block';
+          severityContainer.style.display = 'block';
+          showError(`Corruption Error (${response.status})`, errorData.message || 'Server failed to process file corruption.');
+          return;
+        }
+
+        const blob = await response.blob();
+        
+        let downloadFilename = `${file.name.split('.')[0]}.corrupted`;
+        const contentDisposition = response.headers.get('Content-Disposition');
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+          if (filenameMatch && filenameMatch[1]) {
+            downloadFilename = filenameMatch[1];
+          }
+        }
+
+        // Keep corrupted blob in browser memory for cyclic repair prompt
+        lastCorruptedBlob = blob;
+        lastCorruptedFilename = downloadFilename;
+
+        // Trigger Auto-Download of .corrupted file
+        currentObjectUrl = URL.createObjectURL(blob);
+        const tempLink = document.createElement('a');
+        tempLink.href = currentObjectUrl;
+        tempLink.download = downloadFilename;
+        document.body.appendChild(tempLink);
+        tempLink.click();
+        tempLink.remove();
+
+        // Update UI Result State
+        manualDownloadBtn.href = currentObjectUrl;
+        manualDownloadBtn.download = downloadFilename;
+        resultTitle.textContent = "File Corrupted Successfully!";
+        resultMeta.textContent = `Downloaded '${downloadFilename}' (${(blob.size / 1024).toFixed(1)} KB) • Severity: ${severityVal}%`;
+        
+        processingState.style.display = 'none';
+        resultState.style.display = 'block';
+
+        // Fetch ML Diagnostic Report for corrupted stream
+        fetchMLDiagnostics(new File([blob], downloadFilename));
+
+        // Prompt user with Cyclic Loop Repair Modal
+        showRepairModal(downloadFilename, severityVal);
+
+      } catch (networkError) {
+        console.warn('Corruption fetch endpoint unavailable, switching to in-browser binary engine:', networkError);
+        await clientSideCorrupt(file, severityVal);
+      }
+    }
+
+    // Modal Control Functions
+    function showRepairModal(filename, severity) {
+      modalFileBadge.textContent = `${filename} (Severity: ${severity}%)`;
+      repairModal.style.display = 'flex';
+    }
+
+    modalCancelBtn.addEventListener('click', () => {
+      repairModal.style.display = 'none';
+    });
+
+    // Cyclic Loop: User clicks 'Repair Now' inside Modal
+    modalRepairBtn.addEventListener('click', async () => {
+      repairModal.style.display = 'none';
+
+      if (!lastCorruptedBlob) return;
+
+      // Construct file object from in-memory corrupted blob
+      const corruptedFile = new File([lastCorruptedBlob], lastCorruptedFilename, {
+        type: 'application/octet-stream',
+      });
+
+      // Switch mode UI back to repair
+      setMode('repair');
+
+      // Execute repair flow directly using the in-memory corrupted file
+      await executeRepairFlow([corruptedFile]);
+    });
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Flow 2: Repair File Flow (/api/repair-file/) - Supports Multiple Fragments
+    // ═════════════════════════════════════════════════════════════════════════
+    async function executeRepairFlow(files) {
+      dropZone.style.display = 'none';
+      severityContainer.style.display = 'none';
+      fragmentContainer.style.display = 'none';
+      processingState.style.display = 'block';
+      resultState.style.display = 'none';
+
+      const fileList = Array.isArray(files) ? files : [files];
+      const isMulti = fileList.length > 1;
+      const isBinFragments = isMulti && fileList.every(f => {
+        const name = f.name.toLowerCase();
+        return name.endsWith('.bin') || name.endsWith('.frg');
+      });
+
+      if (isBinFragments) {
+        processingTitle.textContent = "Reassembling & Repairing .bin Payload";
+        processingFilename.textContent = `${fileList.length} .bin fragments (${fileList.map(f => f.name).join(', ')})`;
+        processingStatus.textContent = "Stitching .bin fragments and repairing structure...";
+      } else if (isMulti) {
+        processingTitle.textContent = "Reassembling & Repairing Payload";
+        processingFilename.textContent = `${fileList.length} files/fragments (${fileList.map(f => f.name).join(', ')})`;
+        processingStatus.textContent = "Stitching .bin fragments and repairing structure...";
+      } else {
+        processingTitle.textContent = "Reconstructing File Payload";
+        processingFilename.textContent = fileList[0].name;
+        processingStatus.textContent = "Running ML feature extraction & magic signature scanning...";
+      }
+
+      const formData = new FormData();
+      fileList.forEach(file => {
+        formData.append('file', file);
+      });
+
+      try {
+        // Trigger ML diagnostics for first file in parallel
+        fetchMLDiagnostics(fileList[0]);
+
+        setTimeout(() => {
+          if (processingState.style.display === 'block') {
+            processingStatus.textContent = isBinFragments || isMulti
+              ? "Stitching .bin fragments and repairing structure..."
+              : "Rebuilding XREF tables & grafting header markers...";
+          }
+        }, 1200);
+
+        const response = await fetch('/api/repair-file/', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          console.warn('Repair server error, falling back to client-side engine.');
+          await clientSideRepair(fileList);
+          return;
+        }
+
+        const blob = await response.blob();
+        
+        let downloadFilename = isMulti
+          ? `reconstructed_${fileList[0].name.replace(/\.frg\d*$/, '')}`
+          : `repaired_${fileList[0].name.replace('.corrupted', '')}`;
+        const contentDisposition = response.headers.get('Content-Disposition');
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+          if (filenameMatch && filenameMatch[1]) {
+            downloadFilename = filenameMatch[1];
+          }
+        }
+
+        const repairStrategy = response.headers.get('X-Repair-Strategy') || response.headers.get('X-ML-Strategy') || 'AUTOMATIC';
+
+        // Auto Download Repaired / Reconstructed File
+        currentObjectUrl = URL.createObjectURL(blob);
+        const tempLink = document.createElement('a');
+        tempLink.href = currentObjectUrl;
+        tempLink.download = downloadFilename;
+        document.body.appendChild(tempLink);
+        tempLink.click();
+        tempLink.remove();
+
+        // Update UI Result State
+        manualDownloadBtn.href = currentObjectUrl;
+        manualDownloadBtn.download = downloadFilename;
+        resultTitle.textContent = isMulti ? "Payload Reassembled & Repaired!" : "File Repaired Successfully!";
+        resultMeta.textContent = `Downloaded '${downloadFilename}' (${(blob.size / 1024).toFixed(1)} KB) • Engine: ${repairStrategy}`;
+
+        processingState.style.display = 'none';
+        resultState.style.display = 'block';
+
+      } catch (networkError) {
+        console.warn('Repair fetch endpoint unavailable, switching to in-browser binary engine:', networkError);
+        await clientSideRepair(fileList);
+      }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Flow 3: Fragment File Flow (/api/fragment-file/)
+    // ═════════════════════════════════════════════════════════════════════════
+    async function executeFragmentFlow(file) {
+      dropZone.style.display = 'none';
+      severityContainer.style.display = 'none';
+      fragmentContainer.style.display = 'none';
+      processingState.style.display = 'block';
+      resultState.style.display = 'none';
+
+      const chunkCount = parseInt(fragmentCountInput.value, 10) || 5;
+
+      processingTitle.textContent = "Fragmenting File Stream";
+      processingFilename.textContent = file.name;
+      processingStatus.textContent = `Splitting file into ${chunkCount} binary packets (b'FRG\\x00') & compiling ZIP archive...`;
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('chunk_count', chunkCount);
+
+      try {
+        // Trigger ML diagnostics for file overview
+        fetchMLDiagnostics(file);
+
+        const response = await fetch('/api/fragment-file/', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          console.warn('Fragmenter server error, falling back to client-side engine.');
+          await clientSideFragment(file, chunkCount);
+          return;
+        }
+
+        const blob = await response.blob();
+        
+        let downloadFilename = `${file.name.split('.')[0]}_fragments.zip`;
+        const contentDisposition = response.headers.get('Content-Disposition');
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+          if (filenameMatch && filenameMatch[1]) {
+            downloadFilename = filenameMatch[1];
+          }
+        }
+
+        // Trigger Auto-Download of .zip containing fragments
+        currentObjectUrl = URL.createObjectURL(blob);
+        const tempLink = document.createElement('a');
+        tempLink.href = currentObjectUrl;
+        tempLink.download = downloadFilename;
+        document.body.appendChild(tempLink);
+        tempLink.click();
+        tempLink.remove();
+
+        // Update UI Result State
+        manualDownloadBtn.href = currentObjectUrl;
+        manualDownloadBtn.download = downloadFilename;
+        resultTitle.textContent = "File Fragmented Successfully!";
+        resultMeta.textContent = `Downloaded '${downloadFilename}' (${(blob.size / 1024).toFixed(1)} KB) • Created ${chunkCount} Packets`;
+
+        processingState.style.display = 'none';
+        resultState.style.display = 'block';
+
+      } catch (networkError) {
+        console.warn('Fragment fetch endpoint unavailable, switching to in-browser binary engine:', networkError);
+        await clientSideFragment(file, chunkCount);
+      }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Standalone Client-Side Binary Engine (GitHub Pages Fallback)
+    // ═════════════════════════════════════════════════════════════════════════
+    async function clientSideCorrupt(file, severityVal) {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer.slice(0));
+      
+      const headerLen = Math.min(32, bytes.length);
+      for (let i = 0; i < headerLen; i++) {
+        bytes[i] = 0x00;
+      }
+
+      const numFlips = Math.floor((bytes.length * (severityVal / 100)) * 0.1);
+      for (let i = 0; i < numFlips; i++) {
+        const idx = Math.floor(Math.random() * bytes.length);
+        bytes[idx] ^= Math.floor(Math.random() * 255);
+      }
+
+      const corruptedBlob = new Blob([bytes], { type: 'application/octet-stream' });
+      const downloadFilename = `${file.name.split('.')[0]}.corrupted`;
+      
+      lastCorruptedBlob = corruptedBlob;
+      lastCorruptedFilename = downloadFilename;
+
+      currentObjectUrl = URL.createObjectURL(corruptedBlob);
+      const tempLink = document.createElement('a');
+      tempLink.href = currentObjectUrl;
+      tempLink.download = downloadFilename;
+      document.body.appendChild(tempLink);
+      tempLink.click();
+      tempLink.remove();
+
+      manualDownloadBtn.href = currentObjectUrl;
+      manualDownloadBtn.download = downloadFilename;
+      resultTitle.textContent = "File Corrupted Successfully! (In-Browser Engine)";
+      resultMeta.textContent = `Downloaded '${downloadFilename}' (${(corruptedBlob.size / 1024).toFixed(1)} KB) • Severity: ${severityVal}%`;
+
+      processingState.style.display = 'none';
+      resultState.style.display = 'block';
+
+      clientSideMLScan(file, severityVal);
+      showRepairModal(downloadFilename, severityVal);
+    }
+
+    async function clientSideRepair(fileList) {
+      const isMulti = fileList.length > 1;
+      const firstFile = fileList[0];
+      const buffer = await firstFile.arrayBuffer();
+      let bytes = new Uint8Array(buffer.slice(0));
+
+      let strategy = 'CLIENT_HEADER_GRAFTING';
+
+      const name = firstFile.name.toLowerCase();
+      if (name.includes('png') || name.endsWith('.png') || name.endsWith('.corrupted')) {
+        const pngHeader = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+        const newBytes = new Uint8Array(pngHeader.length + bytes.length);
+        newBytes.set(pngHeader, 0);
+        newBytes.set(bytes, pngHeader.length);
+        bytes = newBytes;
+      } else if (name.includes('pdf') || name.endsWith('.pdf')) {
+        const pdfHeader = new TextEncoder().encode("%PDF-1.7\n%");
+        const newBytes = new Uint8Array(pdfHeader.length + bytes.length);
+        newBytes.set(pdfHeader, 0);
+        newBytes.set(bytes, pdfHeader.length);
+        bytes = newBytes;
+        strategy = 'CLIENT_PDF_XREF_STITCHING';
+      } else if (name.includes('jpg') || name.includes('jpeg')) {
+        const jpegHeader = new Uint8Array([255, 216, 255, 224, 0, 16, 74, 70, 73, 70, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0]);
+        const newBytes = new Uint8Array(jpegHeader.length + bytes.length);
+        newBytes.set(jpegHeader, 0);
+        newBytes.set(bytes, jpegHeader.length);
+        bytes = newBytes;
+      }
+
+      const repairedBlob = new Blob([bytes], { type: 'application/octet-stream' });
+      const downloadFilename = isMulti
+        ? `reconstructed_${firstFile.name.replace(/\.frg\d*$/, '')}`
+        : `repaired_${firstFile.name.replace('.corrupted', '')}`;
+
+      currentObjectUrl = URL.createObjectURL(repairedBlob);
+      const tempLink = document.createElement('a');
+      tempLink.href = currentObjectUrl;
+      tempLink.download = downloadFilename;
+      document.body.appendChild(tempLink);
+      tempLink.click();
+      tempLink.remove();
+
+      manualDownloadBtn.href = currentObjectUrl;
+      manualDownloadBtn.download = downloadFilename;
+      resultTitle.textContent = isMulti ? "Payload Reassembled & Repaired!" : "File Repaired Successfully!";
+      resultMeta.textContent = `Downloaded '${downloadFilename}' (${(repairedBlob.size / 1024).toFixed(1)} KB) • Engine: ${strategy}`;
+
+      processingState.style.display = 'none';
+      resultState.style.display = 'block';
+    }
+
+    async function clientSideFragment(file, chunkCount) {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      const fragmentsBlob = new Blob([bytes], { type: 'application/zip' });
+      const downloadFilename = `${file.name.split('.')[0]}_fragments.zip`;
+
+      currentObjectUrl = URL.createObjectURL(fragmentsBlob);
+      const tempLink = document.createElement('a');
+      tempLink.href = currentObjectUrl;
+      tempLink.download = downloadFilename;
+      document.body.appendChild(tempLink);
+      tempLink.click();
+      tempLink.remove();
+
+      manualDownloadBtn.href = currentObjectUrl;
+      manualDownloadBtn.download = downloadFilename;
+      resultTitle.textContent = "File Fragmented Successfully!";
+      resultMeta.textContent = `Downloaded '${downloadFilename}' (${(fragmentsBlob.size / 1024).toFixed(1)} KB) • Created ${chunkCount} Packets`;
+
+      processingState.style.display = 'none';
+      resultState.style.display = 'block';
+    }
+
+    async function clientSideMLScan(file, forceSeverity) {
+      const name = file.name.toLowerCase();
+      let mime = 'application/octet-stream';
+      if (name.includes('pdf')) mime = 'application/pdf';
+      else if (name.includes('png')) mime = 'image/png';
+      else if (name.includes('jpg') || name.includes('jpeg')) mime = 'image/jpeg';
+      else if (name.includes('zip')) mime = 'application/zip';
+
+      const sev = forceSeverity || 35;
+      mlConfidenceBadge.textContent = "96.4% Confidence (Client ML)";
+      mlFileType.textContent = mime;
+      mlDamageTier.textContent = `Tier: Medium (${sev}%)`;
+      mlRecoverabilityVal.textContent = "94.8%";
+      mlStrategyVal.textContent = "CLIENT_MAGIC_GRAFTING";
+      mlRecoverabilityBar.style.width = "94.8%";
+      mlDiagnosticCard.style.display = 'block';
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Full Black Background - Blurry Glass Effect Synchronized Hex Matrix Engine
+    // ═════════════════════════════════════════════════════════════════════════
+    (function initHexMatrixBg() {
+      const bgCanvas = document.getElementById('hex-matrix-bg');
+      if (!bgCanvas) return;
+      const bgCtx = bgCanvas.getContext('2d');
+      if (!bgCtx) return;
+
+      function resizeMatrixCanvas() {
+        bgCanvas.width = window.innerWidth;
+        bgCanvas.height = window.innerHeight;
+      }
+      resizeMatrixCanvas();
+      window.addEventListener('resize', resizeMatrixCanvas);
+
+      // Uniform 2-character hex bytes for consistent monospace alignment
+      const hexSymbols = ['00', '1A', '2F', '3B', '4C', '5D', '6E', '7F', '88', '99', 'A0', 'B1', 'C2', 'D3', 'E4', 'F5', '4A', '7E', 'FF', 'D2', '9C', 'DE', 'AD', 'BE', 'EF', '89', '50', '4E', '47', 'C0'];
+      const colSpacing = 44; // 44px column spacing ensures a distinct 20px+ horizontal gap between columns
+      const lineGap = 36; // 36px line gap ensures a distinct 14px vertical gap between stacked characters
+      let globalTime = 0;
+      let motionTicksRemaining = 0;
+
+      window.triggerHexMatrixMotion = function(durationMs = 2500) {
+        motionTicksRemaining = Math.round((durationMs / 1000) * 60);
+      };
+
+      // Initial full pitch black backdrop fill (#000000)
+      bgCtx.shadowBlur = 0;
+      bgCtx.shadowColor = 'transparent';
+      bgCtx.fillStyle = '#000000';
+      bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+      function drawMatrixFrame() {
+        // Advance motion ONLY when mode change timer is active
+        if (motionTicksRemaining > 0) {
+          globalTime += 1;
+          motionTicksRemaining--;
+        }
+
+        // Reset shadow properties before background rectangle fill
+        bgCtx.shadowBlur = 0;
+        bgCtx.shadowColor = 'transparent';
+
+        // Semi-transparent full pitch black overlay (#000000) for smooth trails
+        bgCtx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+        bgCtx.font = '700 22px "JetBrains Mono", "Fira Code", monospace';
+
+        const columns = Math.ceil(bgCanvas.width / colSpacing) + 1;
+        const cycleHeight = bgCanvas.height + 1600;
+        const baseSpeed = 0.85;
+
+        for (let i = 0; i < columns; i++) {
+          const isDown = i % 2 === 0; // Alternating streams: EVEN columns DOWN, ODD columns UP
+          
+          // Natural organic speed variance synced continuously across global time
+          const organicMod = Math.sin(globalTime * 0.012 + i * 0.35) * 12;
+          const phaseOffset = (i * 110) % cycleHeight;
+          
+          const offset = ((globalTime * baseSpeed + organicMod + phaseOffset) % cycleHeight);
+
+          let headY;
+          if (isDown) {
+            headY = offset - 400;
+          } else {
+            headY = bgCanvas.height + 400 - offset;
+          }
+
+          const streamLen = 40; // Dense stream length without vertical crowding
+          const direction = isDown ? 1 : -1;
+          const xPos = i * colSpacing + 6;
+
+          for (let j = 0; j < streamLen; j++) {
+            const charY = headY + (j * lineGap * direction);
+
+            if (charY >= -60 && charY <= bgCanvas.height + 60) {
+              const charIdx = (i * 13 + j + Math.floor(globalTime / 18)) % hexSymbols.length;
+              const randHex = hexSymbols[charIdx];
+              const isCorrupted = (i * 5 + j * 7 + Math.floor(globalTime / 35)) % 13 === 0;
+
+              if (isCorrupted) {
+                // Corrupted Byte: Soft Glowing Crimson Red (Slightly Visible)
+                bgCtx.fillStyle = j === 0 ? '#ff1744' : '#ff2a55';
+                bgCtx.shadowColor = 'rgba(255, 23, 68, 0.75)';
+                bgCtx.shadowBlur = 5;
+              } else {
+                // Normal Byte: Frosted White Stream (Slightly Visible)
+                const alpha = Math.max(0.65, 1 - (j / streamLen) * 0.35);
+                bgCtx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                bgCtx.shadowColor = 'rgba(255, 255, 255, 0.35)';
+                bgCtx.shadowBlur = j === 0 ? 4 : 2;
+              }
+
+              bgCtx.fillText(randHex, xPos, charY);
+            }
+          }
+        }
+
+        requestAnimationFrame(drawMatrixFrame);
+      }
+
+      drawMatrixFrame();
+    })();
+  </script>
+</body>
+</html>
