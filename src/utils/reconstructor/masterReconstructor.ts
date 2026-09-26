@@ -250,16 +250,26 @@ export async function reconstructCorruptedFile(
     originalUrl = URL.createObjectURL(inputsArray[0]);
   }
 
+  // Force PDF MIME & extension compliance if category is PDF
+  if (category === 'pdf' || fileName.toLowerCase().endsWith('.pdf') || detectedSig.category === 'pdf') {
+    detectedSig.mime = 'application/pdf';
+    detectedSig.extension = 'pdf';
+  }
+
   // Generate output filename
   let outputName = fileName;
   if (!outputName.includes('_reconstructed')) {
     const parts = outputName.split('.');
     if (parts.length > 1) {
-      const ext = parts.pop();
-      outputName = `${parts.join('.')}_reconstructed.${detectedSig.extension || ext}`;
+      parts.pop();
+      outputName = `${parts.join('.')}_reconstructed.${detectedSig.extension || 'pdf'}`;
     } else {
-      outputName = `${outputName}_reconstructed.${detectedSig.extension}`;
+      outputName = `${outputName}_reconstructed.${detectedSig.extension || 'pdf'}`;
     }
+  }
+
+  if ((category === 'pdf' || fileName.toLowerCase().endsWith('.pdf')) && !outputName.toLowerCase().endsWith('.pdf')) {
+    outputName = `${outputName.replace(/\.[^/.]+$/, '')}.pdf`;
   }
 
   const isSuccessfullyRepaired = fixesCount > 0 || bytesChanged > 0;
