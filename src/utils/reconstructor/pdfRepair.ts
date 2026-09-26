@@ -91,8 +91,11 @@ export async function repairPdf(
       });
 
       const savedBytes = await pdfDoc.save();
+      // Ensure fresh independent copy — pdf-lib may return a subview of a larger buffer
+      const cleanBytes = new Uint8Array(savedBytes.byteLength);
+      cleanBytes.set(savedBytes);
       return {
-        reconstructedBytes: savedBytes,
+        reconstructedBytes: cleanBytes,
         logs,
         fixesCount: fixesCount + 1,
         confidenceScore: Math.min(100, confidenceScore + (fixesCount + 1) * 3),
@@ -119,6 +122,8 @@ export async function repairPdf(
       const pageCount = pdfDoc.getPageCount();
       if (pageCount > 0) {
         const savedBytes = await pdfDoc.save();
+        const cleanBytes = new Uint8Array(savedBytes.byteLength);
+        cleanBytes.set(savedBytes);
         fixesCount += 2;
         logs.push({
           id: safeRandomUUID(),
@@ -127,7 +132,7 @@ export async function repairPdf(
           message: `PDF Object Graph Salvaged: Successfully rebuilt XREF table and catalog tree for ${pageCount} page(s).`,
         });
         return {
-          reconstructedBytes: savedBytes,
+          reconstructedBytes: cleanBytes,
           logs,
           fixesCount,
           confidenceScore: 90,
@@ -153,61 +158,64 @@ export async function repairPdf(
       const font = await newPdf.embedFont(StandardFonts.Helvetica);
       const boldFont = await newPdf.embedFont(StandardFonts.HelveticaBold);
 
-      const linesPerPage = 50;
+      // --- Page 1: always guaranteed header + content ---
+      const firstPage = newPdf.addPage([612, 792]);
+      firstPage.drawText('CYPHER — RECONSTRUCTED PDF CONTENT', {
+        x: 50, y: 750, size: 16, font: boldFont, color: rgb(0.024, 0.714, 0.831),
+      });
+      firstPage.drawRectangle({ x: 50, y: 740, width: 512, height: 1, color: rgb(0.024, 0.714, 0.831) });
+      firstPage.drawText(`Recovered ${extractedLines.length} text segment(s) from corrupted PDF stream.`, {
+        x: 50, y: 724, size: 9, font, color: rgb(0.5, 0.5, 0.5),
+      });
+
       let currentLineIdx = 0;
+      let currentPage = firstPage;
+      let y = 706;
 
       while (currentLineIdx < extractedLines.length) {
-        const page = newPdf.addPage([612, 792]); // Standard US Letter page
-        const isPageOne = currentLineIdx === 0;
-
-        let y = 740;
-
-        if (isPageOne) {
-          page.drawText('RECONSTRUCTED DOCUMENT CONTENT', {
-            x: 50, y, size: 18, font: boldFont, color: rgb(0.024, 0.714, 0.831),
-          });
-          y -= 25;
-          page.drawText(`Salvaged payload from damaged PDF stream (${extractedLines.length} text lines recovered)`, {
-            x: 50, y, size: 10, font, color: rgb(0.4, 0.4, 0.4),
-          });
-          y -= 15;
-          page.drawRectangle({
-            x: 50, y, width: 512, height: 1, color: rgb(0.024, 0.714, 0.831),
-          });
-          y -= 25;
+        if (y < 50) {
+          // Add a fresh page and reset Y
+          currentPage = newPdf.addPage([612, 792]);
+          y = 750;
         }
 
-        const endIdx = Math.min(currentLineIdx + linesPerPage, extractedLines.length);
-        for (let i = currentLineIdx; i < endIdx; i++) {
-          if (y < 40) break;
-          const lineText = extractedLines[i].substring(0, 95);
-          const safeText = lineText.replace(/[^\x20-\x7E]/g, '?');
+        const lineText = extractedLines[currentLineIdx].substring(0, 95);
+        // Strict ASCII-safe substitution — no character outside printable range
+        const safeText = lineText.replace(/[^\x20-\x7E]/g, '').trim();
 
+        if (safeText.length > 0) {
           try {
-            page.drawText(safeText || ' ', {
-              x: 50, y, size: 10, font, color: rgb(0.1, 0.1, 0.1),
+            currentPage.drawText(safeText, {
+              x: 50, y, size: 10, font, color: rgb(0.08, 0.08, 0.08),
             });
+            y -= 14;
           } catch {
-            // Skip unprintable font errors
+            y -= 14; // skip and advance
           }
-          y -= 13;
         }
 
-        currentLineIdx = endIdx;
+        currentLineIdx++;
       }
 
+      // Guard: pdf-lib must have at least 1 page before save
+      const pageCount = newPdf.getPageCount();
+      if (pageCount === 0) throw new Error('PDF assembled with 0 pages — falling back.');
+
       const rebuiltPdfBytes = await newPdf.save();
+      // Always use a fresh buffer copy
+      const cleanBytes = new Uint8Array(rebuiltPdfBytes.byteLength);
+      cleanBytes.set(rebuiltPdfBytes);
       fixesCount += 3;
 
       logs.push({
         id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'success',
-        message: `PDF Content Reconstruction Complete: Rebuilt ${newPdf.getPageCount()}-page valid document with all salvaged text content.`,
+        message: `PDF Content Reconstruction Complete: Rebuilt ${pageCount}-page valid PDF with all salvaged text segments.`,
       });
 
       return {
-        reconstructedBytes: rebuiltPdfBytes,
+        reconstructedBytes: cleanBytes,
         logs,
         fixesCount,
         confidenceScore: 85,
@@ -217,7 +225,7 @@ export async function repairPdf(
         id: safeRandomUUID(),
         timestamp: new Date().toLocaleTimeString(),
         type: 'warning',
-        message: `PDF Text Rebuild Notice: ${err?.message || 'Error assembling page stream'}. Creating fallback container.`,
+        message: `PDF Text Rebuild: ${err?.message || 'Assembly error'}. Generating guaranteed fallback container.`,
       });
     }
   }
@@ -422,40 +430,41 @@ async function createFallbackPdfDocument(
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
+  // Always add at least one page — this is the guaranteed minimum viable PDF
   const page = pdfDoc.addPage([612, 792]);
 
-  page.drawText('CYPHER FILE RECONSTRUCTION REPORT', {
-    x: 50, y: 740, size: 20, font: boldFont, color: rgb(0.024, 0.714, 0.831),
+  page.drawText('CYPHER — PDF RECONSTRUCTION REPORT', {
+    x: 50, y: 740, size: 18, font: boldFont, color: rgb(0.024, 0.714, 0.831),
   });
-
   page.drawRectangle({
     x: 50, y: 730, width: 512, height: 2, color: rgb(0.024, 0.714, 0.831),
   });
+  page.drawText(titleText, { x: 50, y: 706, size: 13, font: boldFont, color: rgb(0.1, 0.1, 0.1) });
 
-  page.drawText(titleText, { x: 50, y: 700, size: 14, font: boldFont });
-
-  const lines = [
+  // All strings are pure ASCII literals — guaranteed safe for Helvetica encoding
+  const fixedLines = [
+    'This PDF was reconstructed by the Cypher File Reconstruction Engine.',
     '',
-    'This PDF container was reconstructed by the Cypher File Reconstruction Engine.',
+    'The original file sustained heavy structural damage. Its compressed stream',
+    'objects could not be decoded, but a valid PDF container has been restored.',
     '',
     'Recovery Details:',
-    `  Original file size: ${originalSize.toLocaleString()} bytes`,
-    `  Reconstruction date: ${new Date().toLocaleString()}`,
-    `  Engine: Cypher PDF Reconstructor v3.5 (pako + pdf-lib)`,
+    '  Engine : Cypher PDF Reconstructor v3.5 (pako + pdf-lib)',
+    `  Size   : ${originalSize.toLocaleString()} bytes (original corrupted input)`,
+    `  Date   : ${new Date().toISOString()}`,
     '',
-    'The file structure has been restored to a valid PDF format.',
-    'You can view and inspect the binary payload metrics in the Cypher Telemetry Dashboard.',
+    'This file is fully valid and can be opened in any PDF viewer.',
   ];
 
-  let y = 670;
-  for (const line of lines) {
-    try {
-      page.drawText(line, { x: 50, y, size: 11, font, color: rgb(0.15, 0.15, 0.15) });
-    } catch {
-      // Skip problematic chars
-    }
-    y -= 16;
+  let y = 678;
+  for (const line of fixedLines) {
+    page.drawText(line, { x: 50, y, size: 11, font, color: rgb(0.15, 0.15, 0.15) });
+    y -= 17;
   }
 
-  return await pdfDoc.save();
+  const savedBytes = await pdfDoc.save();
+  // Return a clean, independent copy of the bytes
+  const cleanBytes = new Uint8Array(savedBytes.byteLength);
+  cleanBytes.set(savedBytes);
+  return cleanBytes;
 }

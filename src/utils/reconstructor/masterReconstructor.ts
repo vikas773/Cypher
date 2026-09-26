@@ -211,10 +211,18 @@ export async function reconstructCorruptedFile(
   }
 
   // === Phase 5: Create output blob and URL ===
-  let repairedBuffer = repairedBytes.buffer.slice(
-    repairedBytes.byteOffset,
-    repairedBytes.byteOffset + repairedBytes.byteLength
-  ) as ArrayBuffer;
+  // For PDF: always create a clean copy to avoid shared-buffer misalignment from pdf-lib
+  let repairedBuffer: ArrayBuffer;
+  if (category === 'pdf') {
+    const freshCopy = new Uint8Array(repairedBytes.byteLength);
+    freshCopy.set(repairedBytes);
+    repairedBuffer = freshCopy.buffer;
+  } else {
+    repairedBuffer = repairedBytes.buffer.slice(
+      repairedBytes.byteOffset,
+      repairedBytes.byteOffset + repairedBytes.byteLength
+    ) as ArrayBuffer;
+  }
   let reconstructedBlob = new Blob([repairedBuffer], { type: detectedSig.mime });
 
   // === Phase 6: Post-processing for images ===
