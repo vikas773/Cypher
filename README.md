@@ -1,6 +1,7 @@
 # CYPHER RECONSTRUCTOR — ML-Powered Cybersecurity Data Recovery & Digital Evidence Engine
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live%20Demo-2ea44f?logo=github)](https://vikas773.github.io/Cypher/)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![Django](https://img.shields.io/badge/Django-4.2+-092E20?logo=django&logoColor=white)](https://djangoproject.com)
 [![React](https://img.shields.io/badge/React-19.0+-61DAFB?logo=react&logoColor=black)](https://react.dev)
